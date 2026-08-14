@@ -4,15 +4,15 @@ QS3D AutoCAD is the Autodesk AutoCAD host for QS3D structural modelling and quan
 
 ## Supported host generations
 
-- AutoCAD 2025–2026: .NET 8 host payload
-- AutoCAD 2027: .NET 10 host payload
+- AutoCAD 2025–2026: .NET 8 host payload compiled against Autodesk-owned `AutoCAD.NET` 25.0.1
+- AutoCAD 2027: .NET 10 host payload compiled against Autodesk-owned `AutoCAD.NET` 26.0.0
 - Autodesk-specific code is isolated from the host-neutral QS3D Core
 - deployment uses an AutoCAD `.bundle`
 - the release pipeline produces both a portable bundle zip and a self-contained `QS3D-AutoCAD-<version>-Setup.exe`
 
 ## Implemented modelling loop
 
-Run `QS3D` to open the dockable command palette. The current host implements:
+Run `QS3D` to lazy-load the plugin and open the dockable command palette. The current host implements:
 
 - `QS3DINIT` — initialize/rename the DWG-backed QS3D project
 - `QS3DLEVEL` — level marker
@@ -30,7 +30,7 @@ Generated geometry carries typed QS3D XData. Project identity/name is stored in 
 
 ## Build and delivery
 
-`CI` builds and smoke-tests the host-neutral Core and verifies command/bundle architecture without requiring Autodesk binaries. Native AutoCAD compilation and packaging is intentionally isolated in `Package native AutoCAD release`, which requires a Windows self-hosted runner with the Autodesk Managed SDK configured.
+GitHub `CI` builds and smoke-tests the host-neutral Core, compiles both AutoCAD host generations using Autodesk-owned packages, validates command/bundle architecture, and compiles the self-contained Setup.exe. Autodesk assemblies are compile-time dependencies only and are excluded from QS3D release payloads.
 
 `./scripts/package.ps1 -Version <version>` creates:
 
@@ -39,4 +39,6 @@ Generated geometry carries typed QS3D XData. Project identity/name is stored in 
 
 The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory; `--uninstall` removes it.
 
-See `docs/IMPLEMENTATION-PLAN.md` and `docs/BUILD.md` for architecture, build prerequisites and native acceptance gates.
+A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, undo/redo and DWG persistence.
+
+See `docs/IMPLEMENTATION-PLAN.md` and `docs/BUILD.md` for architecture, build and native acceptance gates.
