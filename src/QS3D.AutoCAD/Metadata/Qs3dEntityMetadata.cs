@@ -53,7 +53,7 @@ internal sealed record Qs3dEntityMetadata(
     public static bool TryRead(Entity entity, out Qs3dEntityMetadata metadata)
     {
         metadata = null!;
-        var data = entity.GetXDataForApplication(RegAppName);
+        using var data = entity.GetXDataForApplication(RegAppName);
         if (data is null)
         {
             return false;
