@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Windows.Forms;
-using Autodesk.AutoCAD.ApplicationServices.Core;
 using Autodesk.AutoCAD.Windows;
+using AcApplication = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace QS3D.AutoCAD.UI;
 
@@ -60,7 +60,7 @@ internal static class Qs3dPalette
         };
         button.Click += (_, _) =>
         {
-            var document = Application.DocumentManager.MdiActiveDocument;
+            var document = AcApplication.DocumentManager.MdiActiveDocument;
             document?.SendStringToExecute(command + " ", true, false, false);
         };
         parent.Controls.Add(button);
