@@ -274,6 +274,15 @@ internal sealed class Qs3dBrowserControl : UserControl
         [Category("DWG")]
         public string Handle => _entity.Handle;
 
+        [Category("Placement")]
+        public string LevelId => FormatReference(_entity.Metadata.LevelId);
+
+        [Category("Placement")]
+        public string StartGridId => FormatReference(_entity.Metadata.StartGridId);
+
+        [Category("Placement")]
+        public string EndGridId => FormatReference(_entity.Metadata.EndGridId);
+
         [Category("Geometry")]
         public double Width => _entity.Metadata.Width;
 
@@ -294,5 +303,7 @@ internal sealed class Qs3dBrowserControl : UserControl
 
         [Category("Quantity")]
         public double Volume => _entity.Metadata.ToCore().Volume;
+
+        private static string FormatReference(Guid? value) => value?.ToString("D") ?? "—";
     }
 }
