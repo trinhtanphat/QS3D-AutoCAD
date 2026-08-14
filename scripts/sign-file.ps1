@@ -21,16 +21,35 @@ if (-not $SkipTimestamp -and [string]::IsNullOrWhiteSpace($TimestampUrl)) {
     throw 'RFC3161 timestamp URL is required for production signing.'
 }
 
-$kitsRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
-$signTool = Get-ChildItem -Path $kitsRoot -Filter signtool.exe -File -Recurse -ErrorAction SilentlyContinue |
-    Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
-    Sort-Object FullName -Descending |
-    Select-Object -First 1
+function Resolve-SignTool {
+    $command = Get-Command signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -ne $command -and (Test-Path -LiteralPath $command.Source -PathType Leaf)) {
+        return $command.Source
+    }
 
-if ($null -eq $signTool) {
+    $kitsRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
+    if (-not (Test-Path -LiteralPath $kitsRoot -PathType Container)) {
+        throw "Windows SDK signing tools root was not found: $kitsRoot"
+    }
+
+    $direct = Join-Path $kitsRoot 'x64\signtool.exe'
+    if (Test-Path -LiteralPath $direct -PathType Leaf) {
+        return $direct
+    }
+
+    $sdkDirectories = Get-ChildItem -LiteralPath $kitsRoot -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending
+    foreach ($directory in $sdkDirectories) {
+        $candidate = Join-Path $directory.FullName 'x64\signtool.exe'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return $candidate
+        }
+    }
+
     throw "signtool.exe (x64) was not found under $kitsRoot. Install the Windows SDK signing tools."
 }
 
+$signToolPath = Resolve-SignTool
 $securePassword = ConvertTo-SecureString -String $Password -AsPlainText -Force
 $imported = @(Import-PfxCertificate -FilePath $PfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $securePassword -Exportable:$false)
 $certificate = $imported |
@@ -52,12 +71,12 @@ try {
     }
     $signArguments += $FilePath
 
-    & $signTool.FullName @signArguments
+    & $signToolPath @signArguments
     if ($LASTEXITCODE -ne 0) {
         throw "signtool failed for $FilePath with exit code $LASTEXITCODE."
     }
 
-    & $signTool.FullName verify /pa /all /v $FilePath
+    & $signToolPath verify /pa /all /v $FilePath
     if ($LASTEXITCODE -ne 0) {
         throw "Authenticode verification failed for $FilePath with exit code $LASTEXITCODE."
     }
