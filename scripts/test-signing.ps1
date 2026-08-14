@@ -15,43 +15,54 @@ $root = Join-Path $tempRoot ("qs3d-signing-smoke-" + [Guid]::NewGuid().ToString(
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 $target = Join-Path $root (Split-Path -Leaf $FilePath)
 $pfx = Join-Path $root 'smoke.pfx'
-$cer = Join-Path $root 'smoke.cer'
 $passwordText = [Guid]::NewGuid().ToString('N')
-$password = ConvertTo-SecureString -String $passwordText -AsPlainText -Force
-$createdThumbprint = $null
-$trustedThumbprint = $null
+$rsa = $null
+$certificate = $null
 
 try {
+    Write-Host 'Preparing ephemeral signing smoke target...'
     Copy-Item -Force $FilePath $target
-    $certificate = New-SelfSignedCertificate `
-        -Type CodeSigningCert `
-        -Subject 'CN=QS3D CI Signing Smoke' `
-        -CertStoreLocation 'Cert:\CurrentUser\My' `
-        -HashAlgorithm SHA256 `
-        -NotAfter (Get-Date).AddDays(2)
-    $createdThumbprint = $certificate.Thumbprint
 
-    Export-PfxCertificate -Cert $certificate -FilePath $pfx -Password $password | Out-Null
-    Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
-    Remove-Item -LiteralPath "Cert:\CurrentUser\My\$createdThumbprint" -Force
-    $createdThumbprint = $null
+    Write-Host 'Generating ephemeral code-signing certificate with .NET APIs...'
+    $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+    $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
+        'CN=QS3D CI Signing Smoke',
+        $rsa,
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+        [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
 
-    $trusted = Import-Certificate -FilePath $cer -CertStoreLocation 'Cert:\CurrentUser\Root'
-    $trustedThumbprint = $trusted.Thumbprint
+    $eku = [System.Security.Cryptography.OidCollection]::new()
+    [void]$eku.Add([System.Security.Cryptography.Oid]::new('1.3.6.1.5.5.7.3.3', 'Code Signing'))
+    $request.CertificateExtensions.Add(
+        [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($eku, $false))
+    $request.CertificateExtensions.Add(
+        [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(
+            [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature,
+            $true))
 
-    & $signScript -FilePath $target -PfxPath $pfx -Password $passwordText -SkipTimestamp
+    $notBefore = [DateTimeOffset]::UtcNow.AddMinutes(-5)
+    $notAfter = [DateTimeOffset]::UtcNow.AddDays(2)
+    $certificate = $request.CreateSelfSigned($notBefore, $notAfter)
+    $pfxBytes = $certificate.Export(
+        [System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx,
+        $passwordText)
+    [IO.File]::WriteAllBytes($pfx, $pfxBytes)
+
+    Write-Host 'Invoking QS3D signing helper in offline smoke mode...'
+    & $signScript `
+        -FilePath $target `
+        -PfxPath $pfx `
+        -Password $passwordText `
+        -SkipTimestamp `
+        -SkipTrustVerification
     if ($LASTEXITCODE -ne 0) {
         throw 'Signing smoke helper returned a non-zero exit code.'
     }
 
-    Write-Host 'Ephemeral Authenticode signing smoke passed. This is CI plumbing evidence only, not production certificate evidence.'
+    Write-Host 'Ephemeral Authenticode signing smoke passed. This verifies signing plumbing/signer identity only, not production certificate trust or timestamp evidence.'
 }
 finally {
-    if ($createdThumbprint) {
-        Remove-Item -LiteralPath "Cert:\CurrentUser\My\$createdThumbprint" -Force -ErrorAction SilentlyContinue
-    }
-    if ($trustedThumbprint) {
-        Remove-Item -LiteralPath "Cert:\CurrentUser\Root\$trustedThumbprint" -Force -ErrorAction SilentlyContinue
-    }
+    if ($certificate) { $certificate.Dispose() }
+    if ($rsa) { $rsa.Dispose() }
     Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
 }
