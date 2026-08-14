@@ -6,11 +6,27 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   core-host-and-guards:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify exact checkout SHA
+        shell: pwsh
+        run: |
+          $expected = '${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'.ToLowerInvariant()
+          $actual = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "Checkout SHA mismatch: expected $expected, actual $actual"
+          }
+          Write-Host "Exact source SHA: $actual"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
@@ -29,10 +45,15 @@ jobs:
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
-      - name: Compile Setup.exe with embedded fixture bundle
+      - name: Release security policy guards
+        shell: pwsh
+        run: ./scripts/validate-release-policy.ps1
+      - name: Package and verify release contract
         shell: pwsh
         run: |
-          $fixture = Join-Path $env:RUNNER_TEMP 'QS3D-fixture.zip'
-          Compress-Archive -Path 'bundle/QS3D.bundle/PackageContents.xml' -DestinationPath $fixture
-          dotnet publish installer/QS3D.Setup/QS3D.Setup.csproj -c Release -r win-x64 --self-contained true "-p:BundleZipPath=$fixture" -o (Join-Path $env:RUNNER_TEMP 'setup')
-          if (-not (Test-Path (Join-Path $env:RUNNER_TEMP 'setup/QS3D-AutoCAD-Setup.exe'))) { throw 'Setup executable was not produced.' }
+          ./scripts/package.ps1 -Version '0.0.0-ci'
+          ./scripts/verify-artifacts.ps1 -Version '0.0.0-ci'
+      - name: Authenticode signing plumbing smoke
+        timeout-minutes: 2
+        shell: pwsh
+        run: ./scripts/test-signing.ps1 -FilePath 'src/QS3D.AutoCAD/bin/Release/net8.0-windows/QS3D.AutoCAD.dll'

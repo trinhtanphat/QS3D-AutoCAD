@@ -21,11 +21,15 @@ jobs:
       - name: Build bundle and setup executable
         shell: pwsh
         run: ./scripts/package.ps1 -Version '${{ inputs.version }}'
+      - name: Verify release provenance and checksums
+        shell: pwsh
+        run: ./scripts/verify-artifacts.ps1 -Version '${{ inputs.version }}'
       - uses: actions/upload-artifact@v4
         with:
           name: QS3D-AutoCAD-${{ inputs.version }}
           path: |
             artifacts/QS3D-AutoCAD-${{ inputs.version }}.zip
             artifacts/QS3D-AutoCAD-${{ inputs.version }}-Setup.exe
+            artifacts/RELEASE-PROVENANCE.json
             artifacts/SHA256SUMS.txt
           if-no-files-found: error

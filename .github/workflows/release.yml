@@ -11,31 +11,86 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      NATIVE_ACCEPTED_SHA: ${{ vars.QS3D_NATIVE_ACCEPTED_SHA }}
+      SIGNING_PFX_BASE64: ${{ secrets.QS3D_SIGNING_PFX_BASE64 }}
+      SIGNING_PFX_PASSWORD: ${{ secrets.QS3D_SIGNING_PFX_PASSWORD }}
+      TIMESTAMP_URL: ${{ vars.QS3D_TIMESTAMP_URL }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
             10.0.x
-      - name: Build release payloads
+      - name: Validate release gate
         shell: pwsh
         run: |
           $tag = '${{ github.ref_name }}'
           if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$') {
             throw "Release tag must be SemVer-like (for example v0.1.0): $tag"
           }
-          ./scripts/package.ps1 -Version $Matches.version
+          $version = $Matches.version
+          $commit = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($commit -notmatch '^[0-9a-f]{40}$') {
+            throw "Unable to resolve exact release commit: $commit"
+          }
+          & git fetch origin main --no-tags
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to refresh origin/main for the release ancestry gate.'
+          }
+          & git merge-base --is-ancestor $commit origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release commit $commit is not an ancestor of origin/main."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:NATIVE_ACCEPTED_SHA)) {
+            throw 'Repository variable QS3D_NATIVE_ACCEPTED_SHA is required before publishing a release.'
+          }
+          if ($env:NATIVE_ACCEPTED_SHA.Trim().ToLowerInvariant() -ne $commit) {
+            throw "Native acceptance gate mismatch. Accepted SHA=$env:NATIVE_ACCEPTED_SHA; tag commit=$commit"
+          }
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:SIGNING_PFX_PASSWORD)) {
+            throw 'Release signing secrets QS3D_SIGNING_PFX_BASE64 and QS3D_SIGNING_PFX_PASSWORD are required.'
+          }
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SOURCE_COMMIT=$commit" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build, sign and verify release payloads
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'qs3d-release-signing.pfx'
+          try {
+            try {
+              [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
+            }
+            catch {
+              throw 'QS3D_SIGNING_PFX_BASE64 is not valid base64 PFX data.'
+            }
+            $timestamp = if ([string]::IsNullOrWhiteSpace($env:TIMESTAMP_URL)) { 'http://timestamp.digicert.com' } else { $env:TIMESTAMP_URL.Trim() }
+            ./scripts/package.ps1 `
+              -Version $env:RELEASE_VERSION `
+              -SigningPfxPath $pfx `
+              -SigningPassword $env:SIGNING_PFX_PASSWORD `
+              -TimestampUrl $timestamp
+            ./scripts/verify-artifacts.ps1 `
+              -Version $env:RELEASE_VERSION `
+              -ExpectedCommit $env:SOURCE_COMMIT `
+              -RequireSigned
+          }
+          finally {
+            Remove-Item -Force $pfx -ErrorAction SilentlyContinue
+          }
       - name: Create GitHub prerelease
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = '${{ github.ref_name }}'
-          $version = $tag.Substring(1)
           gh release create $tag `
-            "artifacts/QS3D-AutoCAD-$version.zip" `
-            "artifacts/QS3D-AutoCAD-$version-Setup.exe" `
+            "artifacts/QS3D-AutoCAD-$env:RELEASE_VERSION.zip" `
+            "artifacts/QS3D-AutoCAD-$env:RELEASE_VERSION-Setup.exe" `
+            "artifacts/RELEASE-PROVENANCE.json" `
             "artifacts/SHA256SUMS.txt" `
             --title "QS3D AutoCAD $tag" `
             --generate-notes `

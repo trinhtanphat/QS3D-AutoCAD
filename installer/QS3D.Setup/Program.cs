@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
 
@@ -15,6 +16,8 @@ if (args.Any(arg => string.Equals(arg, "--help", StringComparison.OrdinalIgnoreC
     Console.WriteLine("  --uninstall    Remove QS3D.bundle");
     return 0;
 }
+
+EnsureAutoCadClosed();
 
 if (args.Any(arg => string.Equals(arg, "--uninstall", StringComparison.OrdinalIgnoreCase)))
 {
@@ -35,10 +38,16 @@ var assembly = Assembly.GetExecutingAssembly();
 using var bundleStream = assembly.GetManifestResourceStream(resourceName)
     ?? throw new InvalidOperationException("Embedded QS3D bundle payload is missing.");
 
-var temporaryRoot = Path.Combine(Path.GetTempPath(), "QS3D-Setup-" + Guid.NewGuid().ToString("N"));
+var operationId = Guid.NewGuid().ToString("N");
+var temporaryRoot = Path.Combine(Path.GetTempPath(), "QS3D-Setup-" + operationId);
 var archivePath = Path.Combine(temporaryRoot, "QS3D.bundle.zip");
 var extractRoot = Path.Combine(temporaryRoot, "extract");
 Directory.CreateDirectory(temporaryRoot);
+Directory.CreateDirectory(destinationRoot);
+
+var candidate = Path.Combine(destinationRoot, $".QS3D.bundle.install-{operationId}");
+var backup = Path.Combine(destinationRoot, $".QS3D.bundle.backup-{operationId}");
+var destinationMovedToBackup = false;
 
 try
 {
@@ -50,31 +59,69 @@ try
     ZipFile.ExtractToDirectory(archivePath, extractRoot);
     var bundleSource = ResolveBundleSource(extractRoot);
 
-    Directory.CreateDirectory(destinationRoot);
+    CopyDirectory(bundleSource, candidate);
+    ValidateBundle(candidate);
+
     if (Directory.Exists(destination))
     {
-        Directory.Delete(destination, recursive: true);
+        Directory.Move(destination, backup);
+        destinationMovedToBackup = true;
     }
 
-    CopyDirectory(bundleSource, destination);
+    try
+    {
+        Directory.Move(candidate, destination);
+    }
+    catch
+    {
+        if (destinationMovedToBackup && !Directory.Exists(destination) && Directory.Exists(backup))
+        {
+            Directory.Move(backup, destination);
+            destinationMovedToBackup = false;
+        }
+
+        throw;
+    }
+
+    if (destinationMovedToBackup && Directory.Exists(backup))
+    {
+        TryDeleteDirectory(backup);
+        destinationMovedToBackup = false;
+    }
+
     Console.WriteLine($"Installed QS3D AutoCAD to {destination}");
-    Console.WriteLine("Restart AutoCAD if it is already running, then execute QS3D.");
+    Console.WriteLine("Start AutoCAD and execute QS3D.");
     return 0;
+}
+catch
+{
+    if (Directory.Exists(candidate))
+    {
+        TryDeleteDirectory(candidate);
+    }
+
+    if (destinationMovedToBackup && !Directory.Exists(destination) && Directory.Exists(backup))
+    {
+        Directory.Move(backup, destination);
+        destinationMovedToBackup = false;
+    }
+
+    throw;
 }
 finally
 {
-    try
+    TryDeleteDirectory(temporaryRoot);
+    if (!destinationMovedToBackup && Directory.Exists(backup))
     {
-        if (Directory.Exists(temporaryRoot))
-        {
-            Directory.Delete(temporaryRoot, recursive: true);
-        }
+        TryDeleteDirectory(backup);
     }
-    catch (IOException)
+}
+
+static void EnsureAutoCadClosed()
+{
+    if (Process.GetProcessesByName("acad").Length > 0)
     {
-    }
-    catch (UnauthorizedAccessException)
-    {
+        throw new InvalidOperationException("AutoCAD is running. Close all AutoCAD instances before installing, upgrading, or uninstalling QS3D.");
     }
 }
 
@@ -97,6 +144,27 @@ static string ResolveBundleSource(string extractRoot)
     return nested ?? throw new InvalidDataException("The embedded package does not contain QS3D.bundle.");
 }
 
+static void ValidateBundle(string bundle)
+{
+    var required = new[]
+    {
+        "PackageContents.xml",
+        Path.Combine("Contents", "2025-2026", "QS3D.AutoCAD.dll"),
+        Path.Combine("Contents", "2025-2026", "QS3D.Core.dll"),
+        Path.Combine("Contents", "2027", "QS3D.AutoCAD.dll"),
+        Path.Combine("Contents", "2027", "QS3D.Core.dll")
+    };
+
+    foreach (var relativePath in required)
+    {
+        var path = Path.Combine(bundle, relativePath);
+        if (!File.Exists(path))
+        {
+            throw new InvalidDataException($"The embedded QS3D bundle is incomplete: missing {relativePath}.");
+        }
+    }
+}
+
 static void CopyDirectory(string source, string destination)
 {
     Directory.CreateDirectory(destination);
@@ -108,5 +176,22 @@ static void CopyDirectory(string source, string destination)
     foreach (var directory in Directory.EnumerateDirectories(source))
     {
         CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
+    }
+}
+
+static void TryDeleteDirectory(string path)
+{
+    try
+    {
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
+    }
+    catch (IOException)
+    {
+    }
+    catch (UnauthorizedAccessException)
+    {
     }
 }

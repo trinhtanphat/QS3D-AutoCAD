@@ -73,6 +73,20 @@ Autodesk runtime assemblies are compile-time dependencies only and are excluded 
 
 Grid references in this slice are semantic references. They intentionally do not auto-snap or reshape element XY geometry until native interactive Grid-placement behavior has been designed and qualified.
 
+### Implemented source-side — P2 release hardening foundation
+
+- transactional Setup install/upgrade with staged bundle validation and rollback of the previous install on replacement failure
+- Setup refuses install/upgrade/uninstall while AutoCAD is running
+- package script refuses dirty tracked source by default and records the exact git SHA
+- `RELEASE-PROVENANCE.json` with version, exact source SHA, dirty state, runtime matrix, signing state, artifact sizes and SHA-256 hashes
+- independent `verify-artifacts.ps1` validation against provenance and `SHA256SUMS.txt`
+- Authenticode signing helper for staged plugin assemblies and Setup.exe when a real PFX/password is supplied
+- release tag gate requires exact `QS3D_NATIVE_ACCEPTED_SHA`, main ancestry, real signing secrets and signed provenance before GitHub Release creation
+- CI packages and verifies an engineering release contract rather than only compiling Setup.exe
+- privacy posture documents current no-telemetry/no-production-license-network behavior and future opt-in/minimization constraints
+
+The signing hooks are implemented but cannot be called production-qualified until a real certificate is configured and a release run proves the produced binaries verify successfully. Artifact verification is not a complete secure update service.
+
 ### Native/UI work still requiring AutoCAD runtime qualification
 
 - Ribbon integration. Autodesk's Ribbon/application-menu customization surface requires `AdWindows.dll`, so this should be compiled and qualified against the installed AutoCAD/ObjectARX UI runtime instead of weakening the hosted compile gate.
@@ -81,19 +95,21 @@ Grid references in this slice are semantic references. They intentionally do not
 - additional bulk Level/Grid operations such as multi-select rename/resequence and visual drag/reorder where they add model semantics
 - native visual QA for high-DPI/dark/light AutoCAD themes
 
-### Commercial layer requiring production credentials/infrastructure
+### Commercial infrastructure still requiring real credentials/services
 
-- Authenticode/code signing
-- licensing/login/device activation service
-- update service/channel and rollback policy
-- telemetry with explicit opt-in and privacy policy
+- real Authenticode certificate/private-key configuration and signed release evidence
+- licensing/login/device activation backend and client contract
+- authenticated/signed update service/channel with compatibility policy and rollback
+- any future telemetry endpoint, consent UI and privacy/retention operations
 
-These items are intentionally not represented as complete by source-only placeholders. Signing requires a real certificate/private key, and licensing/update/telemetry require production services and policy decisions.
+These items are intentionally not represented as complete by source-only placeholders. Do not add always-allow licensing, fake signatures, embedded production secrets, or network telemetry without the corresponding production service/policy.
 
 ## Acceptance gates
 
-A green source CI run proves that Core, both Autodesk API compile targets, bundle metadata and Setup.exe compile successfully. It does **not** prove AutoCAD runtime behavior.
+A green source CI run proves that Core, both Autodesk API compile targets, bundle metadata, Setup.exe, engineering packaging, provenance and checksums succeed. It does **not** prove AutoCAD runtime behavior or production signing.
 
 Native acceptance must use a real licensed AutoCAD installation for every supported host generation and verify discovery/autoload, all commands, browser selection sync, property editing, Level/Grid assign/move/bind/clear/delete operations, undo/redo, save/reopen persistence, BOQ semantics, restart behavior, install/upgrade/uninstall and exact-build provenance.
+
+A production tag additionally requires the exact native-accepted SHA and real Authenticode credentials; the release workflow must remain fail-closed if either is absent or stale.
 
 CI and runtime gates must never be weakened merely to obtain a green result.
