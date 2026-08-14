@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net10.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>QS3D.AutoCAD</AssemblyName>
+    <RootNamespace>QS3D.AutoCAD</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <AutoCADSdkDir Condition="'$(AutoCADSdkDir)' == ''">$(AUTOCAD_2026_SDK_DIR)</AutoCADSdkDir>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <AutoCADSdkDir Condition="'$(AutoCADSdkDir)' == ''">$(AUTOCAD_2027_SDK_DIR)</AutoCADSdkDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../QS3D.Core/QS3D.Core.csproj" />
+    <Reference Include="AcCoreMgd">
+      <HintPath>$(AutoCADSdkDir)\AcCoreMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="AcDbMgd">
+      <HintPath>$(AutoCADSdkDir)\AcDbMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="AcMgd">
+      <HintPath>$(AutoCADSdkDir)\AcMgd.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ValidateAutoCADSdk" BeforeTargets="ResolveReferences" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Error Condition="'$(AutoCADSdkDir)' == ''" Text="AutoCADSdkDir is not configured. Set AUTOCAD_2026_SDK_DIR for net8.0-windows or AUTOCAD_2027_SDK_DIR for net10.0-windows." />
+    <Error Condition="!Exists('$(AutoCADSdkDir)\AcCoreMgd.dll')" Text="AcCoreMgd.dll was not found under $(AutoCADSdkDir)." />
+    <Error Condition="!Exists('$(AutoCADSdkDir)\AcDbMgd.dll')" Text="AcDbMgd.dll was not found under $(AutoCADSdkDir)." />
+    <Error Condition="!Exists('$(AutoCADSdkDir)\AcMgd.dll')" Text="AcMgd.dll was not found under $(AutoCADSdkDir)." />
+  </Target>
+</Project>
