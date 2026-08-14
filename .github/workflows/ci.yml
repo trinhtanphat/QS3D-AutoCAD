@@ -48,11 +48,17 @@ jobs:
       - name: Release security policy guards
         shell: pwsh
         run: ./scripts/validate-release-policy.ps1
+      - name: Native acceptance contract guards
+        shell: pwsh
+        run: ./scripts/validate-native-acceptance-contract.ps1
       - name: Package and verify release contract
         shell: pwsh
         run: |
           ./scripts/package.ps1 -Version '0.0.0-ci'
           ./scripts/verify-artifacts.ps1 -Version '0.0.0-ci'
+      - name: Native acceptance rejection smoke
+        shell: pwsh
+        run: ./scripts/test-native-acceptance-failclosed.ps1 -Version '0.0.0-ci'
       - name: Authenticode signing plumbing smoke
         timeout-minutes: 2
         shell: pwsh
