@@ -18,6 +18,30 @@ foreach ($requirement in @(
     }
 }
 
+foreach ($requirement in @(
+    'Upload verified engineering native candidate',
+    'actions/upload-artifact@v7',
+    "if: github.event_name == 'push'",
+    'QS3D-AutoCAD-native-candidate-${{ github.sha }}',
+    'artifacts/QS3D-AutoCAD-0.0.0-ci.zip',
+    'artifacts/QS3D-AutoCAD-0.0.0-ci-Setup.exe',
+    'artifacts/RELEASE-PROVENANCE.json',
+    'artifacts/SHA256SUMS.txt',
+    'if-no-files-found: error',
+    'Candidate source SHA: ${{ github.sha }}',
+    'not a signed commercial release and not native PASS'
+)) {
+    if (-not $ciWorkflow.Contains($requirement, [StringComparison]::Ordinal)) {
+        throw "Native candidate handoff regression: CI workflow is missing '$requirement'."
+    }
+}
+$packageStepIndex = $ciWorkflow.IndexOf('Package and verify release contract', [StringComparison]::Ordinal)
+$uploadStepIndex = $ciWorkflow.IndexOf('Upload verified engineering native candidate', [StringComparison]::Ordinal)
+$nativeRejectionIndex = $ciWorkflow.IndexOf('Native acceptance rejection smoke', [StringComparison]::Ordinal)
+if ($packageStepIndex -lt 0 -or $uploadStepIndex -le $packageStepIndex -or $nativeRejectionIndex -le $uploadStepIndex) {
+    throw 'Native candidate handoff must upload only after package verification and before later synthetic native-evidence work can add files.'
+}
+
 $releaseRequirements = @(
     'QS3D_NATIVE_ACCEPTED_SHA',
     'QS3D_SIGNING_PFX_BASE64',
@@ -57,7 +81,12 @@ foreach ($requirement in @('GetProcessesByName("acad")', '.QS3D.bundle.install-'
     }
 }
 
-foreach ($requiredDoc in @('docs\RELEASE-SECURITY.md', 'docs\PRIVACY.md')) {
+foreach ($requiredDoc in @(
+    'docs\RELEASE-SECURITY.md',
+    'docs\PRIVACY.md',
+    'docs\NATIVE-ACCEPTANCE.md',
+    'docs\NATIVE-CANDIDATE-HANDOFF.md'
+)) {
     if (-not (Test-Path (Join-Path $repo $requiredDoc) -PathType Leaf)) {
         throw "Release documentation regression: missing $requiredDoc"
     }
