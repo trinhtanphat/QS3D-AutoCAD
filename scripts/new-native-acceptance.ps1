@@ -131,5 +131,5 @@ finally {
 
 Write-Host "Created native acceptance session: $EvidencePath"
 Write-Host "Candidate SHA: $($evidence.candidate.sourceCommit)"
-Write-Host "AutoCAD $HostGeneration: $($versionInfo.ProductVersion)"
-Write-Host "All acceptance checks start as pending. Hosted/source CI does not set native PASS results."
+Write-Host "AutoCAD ${HostGeneration}: $($versionInfo.ProductVersion)"
+Write-Host 'All acceptance checks start as pending. Hosted/source CI does not set native PASS results.'
