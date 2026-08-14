@@ -1,10 +1,17 @@
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$ciWorkflow = Get-Content -Raw (Join-Path $repo '.github\workflows\ci.yml')
 $releaseWorkflow = Get-Content -Raw (Join-Path $repo '.github\workflows\release.yml')
 $packageWorkflow = Get-Content -Raw (Join-Path $repo '.github\workflows\package-native.yml')
 $packageScript = Get-Content -Raw (Join-Path $repo 'scripts\package.ps1')
 $verifyScript = Get-Content -Raw (Join-Path $repo 'scripts\verify-artifacts.ps1')
 $setupSource = Get-Content -Raw (Join-Path $repo 'installer\QS3D.Setup\Program.cs')
+
+foreach ($requirement in @('github.event.pull_request.head.sha', 'Verify exact checkout SHA', 'git rev-parse HEAD')) {
+    if (-not $ciWorkflow.Contains($requirement, [StringComparison]::Ordinal)) {
+        throw "Exact-SHA CI regression: CI workflow is missing '$requirement'."
+    }
+}
 
 $releaseRequirements = @(
     'QS3D_NATIVE_ACCEPTED_SHA',
