@@ -52,14 +52,13 @@ public static class ReferenceManagerService
             }
         }
 
-        var normalX = -direction.Y;
-        var normalY = direction.X;
+        var normal = CanonicalNormal(direction, tolerance);
         return grids
             .Select(grid => new
             {
                 Grid = grid,
-                Offset = (((grid.Start.X + grid.End.X) / 2.0) * normalX) +
-                         (((grid.Start.Y + grid.End.Y) / 2.0) * normalY)
+                Offset = (((grid.Start.X + grid.End.X) / 2.0) * normal.X) +
+                         (((grid.Start.Y + grid.End.Y) / 2.0) * normal.Y)
             })
             .OrderBy(item => item.Offset)
             .ThenBy(item => item.Grid.Name, StringComparer.OrdinalIgnoreCase)
@@ -97,6 +96,16 @@ public static class ReferenceManagerService
             return new PlanDirection(-direction.X, -direction.Y);
         }
         return direction;
+    }
+
+    private static PlanDirection CanonicalNormal(PlanDirection direction, double tolerance)
+    {
+        var normal = new PlanDirection(-direction.Y, direction.X);
+        if (normal.X < -tolerance || (Math.Abs(normal.X) <= tolerance && normal.Y < 0))
+        {
+            return new PlanDirection(-normal.X, -normal.Y);
+        }
+        return normal;
     }
 
     private static PlanDirection UnitDirection(StructuralElement grid, double tolerance)
