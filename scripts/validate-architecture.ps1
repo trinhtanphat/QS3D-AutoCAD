@@ -10,7 +10,7 @@ if ($autodeskLeak) { throw 'Architecture violation: QS3D.Core references Autodes
 $requiredCommands = @(
     'QS3D','QS3DABOUT','QS3DINIT','QS3DLEVEL','QS3DGRID','QS3DCOLUMN','QS3DBEAM','QS3DSLAB',
     'QS3DWALL','QS3DCURTAIN','QS3DSECTION','QS3DBOQ','QS3DEDIT','QS3DREFRESH',
-    'QS3DASSIGNLEVEL','QS3DLEVELMOVE','QS3DBINDGRID','QS3DREFERENCEDELETE','QS3DGRIDARRAY','QS3DREFERENCES'
+    'QS3DASSIGNLEVEL','QS3DLEVELMOVE','QS3DBINDGRID','QS3DCLEARREFS','QS3DREFERENCEDELETE','QS3DGRIDARRAY','QS3DREFERENCES'
 )
 $source = (Get-ChildItem -File $commandRoot -Filter '*.cs' | ForEach-Object { Get-Content -Raw $_.FullName }) -join "`n"
 foreach ($command in $requiredCommands) {
