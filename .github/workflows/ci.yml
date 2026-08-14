@@ -25,3 +25,10 @@ jobs:
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
+      - name: Compile Setup.exe with embedded fixture bundle
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP 'QS3D-fixture.zip'
+          Compress-Archive -Path 'bundle/QS3D.bundle/PackageContents.xml' -DestinationPath $fixture
+          dotnet publish installer/QS3D.Setup/QS3D.Setup.csproj -c Release -r win-x64 --self-contained true "-p:BundleZipPath=$fixture" -o (Join-Path $env:RUNNER_TEMP 'setup')
+          if (-not (Test-Path (Join-Path $env:RUNNER_TEMP 'setup/QS3D-AutoCAD-Setup.exe'))) { throw 'Setup executable was not produced.' }
