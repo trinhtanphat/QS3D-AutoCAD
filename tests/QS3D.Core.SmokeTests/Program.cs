@@ -1,3 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using QS3D.Core.Commercial;
 using QS3D.Core.Geometry;
 using QS3D.Core.Model;
 using QS3D.Core.Services;
@@ -95,7 +99,90 @@ AssertThrows<InvalidOperationException>(
     () => ReferenceManagerService.OrderParallelGrids([gridLeft, gridHorizontal]),
     "non-parallel Grid families must not be silently resequenced together");
 
+var licenseNow = new DateTimeOffset(2026, 8, 14, 16, 0, 0, TimeSpan.Zero);
+var lease = new LicenseLeaseSnapshot(
+    "account-1",
+    "subscription-1",
+    "device-1",
+    "seat-1",
+    licenseNow.AddHours(-1),
+    licenseNow.AddHours(1),
+    licenseNow.AddDays(2));
+var activeLicense = LicensePolicy.Evaluate(lease, licenseNow, "device-1");
+Assert(activeLicense.Access == LicenseAccess.Active && activeLicense.CanAuthor, "valid lease must authorize during online validity");
+var graceLicense = LicensePolicy.Evaluate(lease, licenseNow.AddHours(2), "device-1");
+Assert(graceLicense.Access == LicenseAccess.OfflineGrace && graceLicense.CanAuthor, "expired online lease may authorize only inside explicit offline grace");
+var expiredLicense = LicensePolicy.Evaluate(lease, licenseNow.AddDays(3), "device-1");
+Assert(expiredLicense.Access == LicenseAccess.Denied && !expiredLicense.CanAuthor && expiredLicense.Reason == "expired", "lease must fail closed after offline grace");
+var wrongDevice = LicensePolicy.Evaluate(lease, licenseNow, "device-2");
+Assert(wrongDevice.Access == LicenseAccess.Denied && wrongDevice.Reason == "device_mismatch", "device mismatch must fail closed");
+Assert(LicensePolicy.Evaluate(null, licenseNow, "device-1").Access == LicenseAccess.Denied, "missing lease must fail closed");
+Assert(
+    LicensePolicy.Evaluate(lease with { OfflineGraceUntilUtc = lease.ValidUntilUtc.AddMinutes(-1) }, licenseNow, "device-1").Reason == "invalid_lease",
+    "invalid lease timestamp ordering must fail closed");
+AssertThrows<ArgumentException>(
+    () => LicensePolicy.Evaluate(lease, licenseNow, " "),
+    "missing expected device identity must be rejected");
+
+var packageBytes = Encoding.UTF8.GetBytes("qs3d-update-package-v1");
+var packageSha256 = Convert.ToHexString(SHA256.HashData(packageBytes)).ToLowerInvariant();
+var updatePayload = new UpdateManifestPayload(
+    1,
+    "stable",
+    "1.2.3",
+    2025,
+    2027,
+    "https://updates.example.invalid/QS3D-AutoCAD-1.2.3.zip",
+    packageSha256,
+    licenseNow);
+using var updateSigningKey = RSA.Create();
+updateSigningKey.KeySize = 2048;
+var updaterPublicKey = updateSigningKey.ExportSubjectPublicKeyInfoPem();
+var signedManifest = SignManifest(updatePayload, updateSigningKey);
+var verifiedUpdate = UpdateManifestVerifier.Verify(signedManifest, updaterPublicKey, 2026, "stable");
+Assert(verifiedUpdate.Version == "1.2.3" && verifiedUpdate.PackageSha256 == packageSha256, "signed update manifest must preserve verified payload");
+UpdateManifestVerifier.VerifyPackage(packageBytes, verifiedUpdate.PackageSha256);
+AssertThrows<InvalidDataException>(
+    () => UpdateManifestVerifier.VerifyPackage(Encoding.UTF8.GetBytes("tampered-package"), verifiedUpdate.PackageSha256),
+    "tampered update package must fail SHA-256 verification");
+AssertThrows<InvalidDataException>(
+    () => UpdateManifestVerifier.Verify(signedManifest, updaterPublicKey, 2028, "stable"),
+    "manifest outside AutoCAD generation range must be rejected");
+AssertThrows<InvalidDataException>(
+    () => UpdateManifestVerifier.Verify(signedManifest, updaterPublicKey, 2026, "preview"),
+    "manifest from another update channel must be rejected");
+var tamperedPayloadBytes = JsonSerializer.SerializeToUtf8Bytes(updatePayload with { Version = "9.9.9" });
+var tamperedEnvelope = JsonSerializer.Serialize(new UpdateManifestEnvelope(
+    Convert.ToBase64String(tamperedPayloadBytes),
+    JsonSerializer.Deserialize<UpdateManifestEnvelope>(signedManifest)!.SignatureBase64));
+AssertThrows<InvalidDataException>(
+    () => UpdateManifestVerifier.Verify(tamperedEnvelope, updaterPublicKey, 2026, "stable"),
+    "manifest payload tampering must invalidate signature");
+AssertThrows<InvalidDataException>(
+    () => UpdateManifestVerifier.Verify(
+        SignManifest(updatePayload with { PackageUri = "http://updates.example.invalid/QS3D.zip" }, updateSigningKey),
+        updaterPublicKey,
+        2026,
+        "stable"),
+    "non-HTTPS package URI must be rejected even with a valid signature");
+AssertThrows<InvalidDataException>(
+    () => UpdateManifestVerifier.Verify(
+        SignManifest(updatePayload with { PackageSha256 = "abcd" }, updateSigningKey),
+        updaterPublicKey,
+        2026,
+        "stable"),
+    "malformed package hash must be rejected even with a valid signature");
+
 Console.WriteLine("QS3D.Core smoke tests passed.");
+
+static string SignManifest(UpdateManifestPayload payload, RSA key)
+{
+    var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+    var signature = key.SignData(payloadBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
+    return JsonSerializer.Serialize(new UpdateManifestEnvelope(
+        Convert.ToBase64String(payloadBytes),
+        Convert.ToBase64String(signature)));
+}
 
 static void Assert(bool condition, string message)
 {

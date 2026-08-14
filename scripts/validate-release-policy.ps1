@@ -6,6 +6,10 @@ $packageWorkflow = Get-Content -Raw (Join-Path $repo '.github\workflows\package-
 $packageScript = Get-Content -Raw (Join-Path $repo 'scripts\package.ps1')
 $verifyScript = Get-Content -Raw (Join-Path $repo 'scripts\verify-artifacts.ps1')
 $setupSource = Get-Content -Raw (Join-Path $repo 'installer\QS3D.Setup\Program.cs')
+$commercialRoot = Join-Path $repo 'src\QS3D.Core\Commercial'
+$licensePolicyPath = Join-Path $commercialRoot 'LicensePolicy.cs'
+$updateVerifierPath = Join-Path $commercialRoot 'UpdateManifestVerifier.cs'
+$coreSmokePath = Join-Path $repo 'tests\QS3D.Core.SmokeTests\Program.cs'
 
 foreach ($requirement in @(
     'github.event.pull_request.head.sha',
@@ -81,11 +85,72 @@ foreach ($requirement in @('GetProcessesByName("acad")', '.QS3D.bundle.install-'
     }
 }
 
+foreach ($path in @($licensePolicyPath, $updateVerifierPath, $coreSmokePath)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Commercial trust boundary file is missing: $path"
+    }
+}
+$licenseSource = Get-Content -Raw -LiteralPath $licensePolicyPath
+$updateSource = Get-Content -Raw -LiteralPath $updateVerifierPath
+$coreSmokeSource = Get-Content -Raw -LiteralPath $coreSmokePath
+foreach ($requirement in @(
+    'LicenseAccess',
+    'OfflineGrace',
+    'device_mismatch',
+    'invalid_lease',
+    'expired',
+    'CanAuthor'
+)) {
+    if (-not $licenseSource.Contains($requirement, [StringComparison]::Ordinal)) {
+        throw "License fail-closed regression: missing '$requirement'."
+    }
+}
+foreach ($requirement in @(
+    'ImportFromPem',
+    'VerifyData',
+    'RSASignaturePadding.Pss',
+    'HashAlgorithmName.SHA256',
+    'Uri.UriSchemeHttps',
+    'SHA256.HashData',
+    'CryptographicOperations.FixedTimeEquals',
+    'Update is not compatible with this AutoCAD generation'
+)) {
+    if (-not $updateSource.Contains($requirement, [StringComparison]::Ordinal)) {
+        throw "Updater trust regression: missing '$requirement'."
+    }
+}
+$commercialProductionSource = $licenseSource + "`n" + $updateSource
+foreach ($forbidden in @(
+    'HttpClient',
+    'SignData(',
+    'BEGIN PRIVATE KEY',
+    'BEGIN RSA PRIVATE KEY',
+    'always-allow',
+    'always allow'
+)) {
+    if ($commercialProductionSource.Contains($forbidden, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Commercial trust boundary must not own network/private-signing/bypass behavior: found '$forbidden'."
+    }
+}
+foreach ($requirement in @(
+    'LicensePolicy.Evaluate',
+    'UpdateManifestVerifier.Verify',
+    'UpdateManifestVerifier.VerifyPackage',
+    'tampered update package',
+    'manifest payload tampering',
+    'non-HTTPS package URI'
+)) {
+    if (-not $coreSmokeSource.Contains($requirement, [StringComparison]::Ordinal)) {
+        throw "Commercial trust smoke regression: missing '$requirement'."
+    }
+}
+
 foreach ($requiredDoc in @(
     'docs\RELEASE-SECURITY.md',
     'docs\PRIVACY.md',
     'docs\NATIVE-ACCEPTANCE.md',
-    'docs\NATIVE-CANDIDATE-HANDOFF.md'
+    'docs\NATIVE-CANDIDATE-HANDOFF.md',
+    'docs\COMMERCIAL-TRUST-BOUNDARY.md'
 )) {
     if (-not (Test-Path (Join-Path $repo $requiredDoc) -PathType Leaf)) {
         throw "Release documentation regression: missing $requiredDoc"
