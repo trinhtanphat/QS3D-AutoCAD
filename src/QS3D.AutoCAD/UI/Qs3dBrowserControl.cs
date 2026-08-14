@@ -87,15 +87,12 @@ internal sealed class Qs3dBrowserControl : UserControl
                 return;
             }
 
-            using (document.LockDocument())
+            foreach (var item in Qs3dDocumentIndex.Scan(document.Database))
             {
-                foreach (var item in Qs3dDocumentIndex.Scan(document.Database))
-                {
-                    var row = new ListViewItem(item.Metadata.Kind.ToString()) { Tag = item };
-                    row.SubItems.Add(item.Metadata.Name);
-                    row.SubItems.Add(item.Handle);
-                    _list.Items.Add(row);
-                }
+                var row = new ListViewItem(item.Metadata.Kind.ToString()) { Tag = item };
+                row.SubItems.Add(item.Metadata.Name);
+                row.SubItems.Add(item.Handle);
+                _list.Items.Add(row);
             }
         }
         finally
