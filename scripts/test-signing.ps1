@@ -10,10 +10,8 @@ if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
     throw "Signing smoke target not found: $FilePath"
 }
 
-$root = Join-Path $env:RUNNER_TEMP ("qs3d-signing-smoke-" + [Guid]::NewGuid().ToString('N'))
-if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
-    $root = Join-Path ([IO.Path]::GetTempPath()) ("qs3d-signing-smoke-" + [Guid]::NewGuid().ToString('N'))
-}
+$tempRoot = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
+$root = Join-Path $tempRoot ("qs3d-signing-smoke-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 $target = Join-Path $root (Split-Path -Leaf $FilePath)
 $pfx = Join-Path $root 'smoke.pfx'
