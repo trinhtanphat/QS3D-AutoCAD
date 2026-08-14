@@ -56,6 +56,29 @@ jobs:
         run: |
           ./scripts/package.ps1 -Version '0.0.0-ci'
           ./scripts/verify-artifacts.ps1 -Version '0.0.0-ci'
+      - name: Upload verified engineering native candidate
+        if: github.event_name == 'push'
+        id: native-candidate-upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: QS3D-AutoCAD-native-candidate-${{ github.sha }}
+          path: |
+            artifacts/QS3D-AutoCAD-0.0.0-ci.zip
+            artifacts/QS3D-AutoCAD-0.0.0-ci-Setup.exe
+            artifacts/RELEASE-PROVENANCE.json
+            artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Report engineering native candidate
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          Write-Host "Engineering artifact id: ${{ steps.native-candidate-upload.outputs.artifact-id }}"
+          Write-Host "Engineering artifact digest: ${{ steps.native-candidate-upload.outputs.artifact-digest }}"
+          Write-Host "Engineering artifact URL: ${{ steps.native-candidate-upload.outputs.artifact-url }}"
+          Write-Host "Candidate source SHA: ${{ github.sha }}"
+          Write-Host 'This is an engineering/native-acceptance candidate, not a signed commercial release and not native PASS.'
       - name: Native acceptance rejection smoke
         shell: pwsh
         run: ./scripts/test-native-acceptance-failclosed.ps1 -Version '0.0.0-ci'
