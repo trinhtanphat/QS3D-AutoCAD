@@ -5,11 +5,14 @@ using Autodesk.AutoCAD.GraphicsInterface;
 
 namespace QS3D.AutoCAD.UI;
 
+internal readonly record struct Qs3dPreviewAnnotation(string Text, double TextHeight);
+
 internal sealed class Qs3dPointPreviewJig : DrawJig
 {
     private readonly Point3d _basePoint;
     private readonly string _message;
     private readonly Func<Point3d, IEnumerable<Entity>> _previewFactory;
+    private readonly Func<Point3d, Qs3dPreviewAnnotation?>? _annotationFactory;
     private readonly Func<Point3d, Point3d> _normalizePoint;
     private readonly bool _useBasePoint;
     private Point3d _currentPoint;
@@ -20,11 +23,13 @@ internal sealed class Qs3dPointPreviewJig : DrawJig
         string message,
         Func<Point3d, IEnumerable<Entity>> previewFactory,
         Func<Point3d, Point3d>? normalizePoint = null,
-        bool useBasePoint = true)
+        bool useBasePoint = true,
+        Func<Point3d, Qs3dPreviewAnnotation?>? annotationFactory = null)
     {
         _basePoint = basePoint;
         _message = message;
         _previewFactory = previewFactory;
+        _annotationFactory = annotationFactory;
         _normalizePoint = normalizePoint ?? (point => point);
         _useBasePoint = useBasePoint;
         _currentPoint = basePoint;
@@ -84,6 +89,8 @@ internal sealed class Qs3dPointPreviewJig : DrawJig
                     entity.WorldDraw(draw);
                 }
             }
+
+            DrawAnnotation(draw);
         }
         catch (ArgumentException)
         {
@@ -91,9 +98,29 @@ internal sealed class Qs3dPointPreviewJig : DrawJig
         }
         catch (Autodesk.AutoCAD.Runtime.Exception)
         {
-            // The geometry kernel may reject transient near-zero solids. Keep the jig alive.
+            // The geometry/text engine may reject transient near-zero frames. Keep the jig alive.
         }
 
         return true;
+    }
+
+    private void DrawAnnotation(WorldDraw draw)
+    {
+        if (_annotationFactory?.Invoke(_currentPoint) is not Qs3dPreviewAnnotation annotation ||
+            string.IsNullOrWhiteSpace(annotation.Text) ||
+            !double.IsFinite(annotation.TextHeight) ||
+            annotation.TextHeight <= 0)
+        {
+            return;
+        }
+
+        var offset = annotation.TextHeight * 1.75;
+        using var text = new DBText
+        {
+            TextString = annotation.Text,
+            Height = annotation.TextHeight,
+            Position = _currentPoint + new Vector3d(offset, offset, offset * 0.25)
+        };
+        text.WorldDraw(draw);
     }
 }

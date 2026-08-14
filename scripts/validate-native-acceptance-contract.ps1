@@ -54,6 +54,7 @@ $criticalChecks = @(
     'grid_dependency_safety',
     'reference_manager_lifecycle',
     'jig_live_solid_preview',
+    'jig_live_dimensions_orientation',
     'jig_cancel_safety',
     'grid_geometry_snap',
     'undo_redo',
