@@ -32,9 +32,18 @@ jobs:
           if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$') {
             throw "Release tag must be SemVer-like (for example v0.1.0): $tag"
           }
+          $version = $Matches.version
           $commit = (& git rev-parse HEAD).Trim().ToLowerInvariant()
           if ($commit -notmatch '^[0-9a-f]{40}$') {
             throw "Unable to resolve exact release commit: $commit"
+          }
+          & git fetch origin main --no-tags
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to refresh origin/main for the release ancestry gate.'
+          }
+          & git merge-base --is-ancestor $commit origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release commit $commit is not an ancestor of origin/main."
           }
           if ([string]::IsNullOrWhiteSpace($env:NATIVE_ACCEPTED_SHA)) {
             throw 'Repository variable QS3D_NATIVE_ACCEPTED_SHA is required before publishing a release.'
@@ -45,7 +54,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:SIGNING_PFX_PASSWORD)) {
             throw 'Release signing secrets QS3D_SIGNING_PFX_BASE64 and QS3D_SIGNING_PFX_PASSWORD are required.'
           }
-          "RELEASE_VERSION=$($Matches.version)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SOURCE_COMMIT=$commit" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Build, sign and verify release payloads
         shell: pwsh
