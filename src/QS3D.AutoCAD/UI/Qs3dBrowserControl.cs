@@ -132,18 +132,28 @@ internal sealed class Qs3dBrowserControl : UserControl
         if (_boundDocument is not null)
         {
             _boundDocument.ImpliedSelectionChanged -= OnImpliedSelectionChanged;
+            _boundDocument.CommandEnded -= OnCommandEnded;
         }
 
         _boundDocument = document;
         if (_boundDocument is not null)
         {
             _boundDocument.ImpliedSelectionChanged += OnImpliedSelectionChanged;
+            _boundDocument.CommandEnded += OnCommandEnded;
         }
     }
 
     private void OnImpliedSelectionChanged(object? sender, EventArgs e)
     {
         SyncFromDrawingSelection();
+    }
+
+    private void OnCommandEnded(object sender, CommandEventArgs e)
+    {
+        if (e.GlobalCommandName.StartsWith("QS3D", StringComparison.OrdinalIgnoreCase))
+        {
+            RefreshData();
+        }
     }
 
     private void SyncFromDrawingSelection()
