@@ -32,6 +32,7 @@ Run `QS3D` to lazy-load the plugin and open the dockable QS3D workspace. The cur
 - `QS3DGRIDARRAY` — create a parallel named Grid series with fixed spacing
 - `QS3DREFERENCEDELETE` — delete an unused Level/Grid while refusing deletion when dependents remain
 - `QS3DREFERENCES` — list Level/Grid references and dependent counts
+- `QS3DRIBBON` — reconcile/create the QS3D Ribbon through AutoCAD's loaded `Autodesk.Windows` runtime UI types
 - `QS3DREFRESH` — refresh the model browser
 - `QS3DABOUT` — host/runtime information
 
@@ -41,9 +42,17 @@ Generated geometry carries typed QS3D XData. Project identity/name is stored in 
 
 Grid bindings currently express project semantics and dependency safety; they do not automatically snap or reshape bound geometry. Native interactive Grid snapping and full live-solid EntityJig authoring remain runtime-qualified follow-up work.
 
+### Ribbon boundary
+
+The Ribbon bridge deliberately does **not** compile against `AdWindows.dll` or `Autodesk.Windows`. Hosted CI cannot substitute or mock that native AutoCAD UI dependency. `QS3DRIBBON` resolves the loaded AutoCAD UI assembly/types at runtime, builds an idempotent QS3D tab with Model/References/Review panels, and fails softly so the palette/model commands remain usable if the Ribbon API is unavailable.
+
+A successful hosted compile only proves the bridge source remains host-safe. `ribbon_surface` and `ribbon_visual_qa` remain mandatory native acceptance gates in real AutoCAD 2025, 2026 and 2027.
+
 ## Build and delivery
 
 GitHub `CI` builds and smoke-tests the host-neutral Core, compiles both AutoCAD host generations using Autodesk-owned packages, validates command/bundle architecture, packages an engineering release candidate, and verifies release provenance/checksums end to end. Autodesk assemblies are compile-time dependencies only and are excluded from QS3D release payloads.
+
+CI also validates the native-acceptance tooling itself and proves that synthetic evidence with `pending` checks is rejected. Hosted CI never creates a native PASS result.
 
 `./scripts/package.ps1 -Version <version>` creates:
 
@@ -60,6 +69,6 @@ Tag publication is fail-closed: the tagged SHA must be on `main`, must exactly e
 
 The current plugin sends no telemetry or production licensing calls. See `docs/PRIVACY.md` for the current privacy posture and `docs/RELEASE-SECURITY.md` for release/signing gates.
 
-A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, editing, Level/Grid dependency operations, undo/redo, save/reopen persistence and installer behavior.
+A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, editing, Level/Grid dependency operations, Ribbon behavior, undo/redo, save/reopen persistence and installer behavior. See `docs/NATIVE-ACCEPTANCE.md` for the exact evidence workflow.
 
 See `docs/IMPLEMENTATION-PLAN.md` and `docs/BUILD.md` for architecture, build and native acceptance gates.

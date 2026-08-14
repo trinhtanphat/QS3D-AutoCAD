@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qs3d.local/schemas/native-acceptance-evidence.schema.json",
+  "title": "QS3D AutoCAD native acceptance evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "product",
+    "sessionId",
+    "createdAtUtc",
+    "updatedAtUtc",
+    "candidate",
+    "host",
+    "operator",
+    "checks"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "product": { "const": "QS3D AutoCAD" },
+    "sessionId": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "createdAtUtc": { "type": "string", "format": "date-time" },
+    "updatedAtUtc": { "type": "string", "format": "date-time" },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "sourceCommit", "signed", "artifacts"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "signed": { "type": "boolean" },
+        "artifacts": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "sha256", "bytes"],
+            "properties": {
+              "file": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "bytes": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generation",
+        "expectedRuntimeFamily",
+        "observedClrVersion",
+        "acadExe",
+        "productName",
+        "fileVersion",
+        "productVersion"
+      ],
+      "properties": {
+        "generation": { "enum": ["2025", "2026", "2027"] },
+        "expectedRuntimeFamily": { "enum": [".NET 8", ".NET 10"] },
+        "observedClrVersion": { "type": ["string", "null"], "minLength": 1 },
+        "acadExe": { "type": "string", "minLength": 1 },
+        "productName": { "type": "string", "minLength": 1 },
+        "fileVersion": { "type": "string", "minLength": 1 },
+        "productVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "machine", "notes"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "machine": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string" }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "notes", "recordedAtUtc"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "status": { "enum": ["pending", "pass", "fail", "blocked"] },
+          "notes": { "type": "string" },
+          "recordedAtUtc": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    }
+  }
+}

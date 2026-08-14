@@ -87,9 +87,25 @@ Grid references in this slice are semantic references. They intentionally do not
 
 The signing hooks are implemented but cannot be called production-qualified until a real certificate is configured and a release run proves the produced binaries verify successfully. Artifact verification is not a complete secure update service.
 
+### Implemented source-side — native acceptance evidence and Ribbon bridge
+
+- versioned native evidence schema and a fixed required-check contract for AutoCAD 2025, 2026 and 2027
+- evidence sessions bind the exact source SHA, candidate version, release artifact hashes, actual `acad.exe` product/file version and operator/machine identity
+- all native checks start `pending`; result tooling requires explicit pass/fail/blocked records with notes
+- runtime identity requires CLR major 8 for AutoCAD 2025/2026 and CLR major 10 for AutoCAD 2027
+- final validation requires exactly one passing session per supported AutoCAD generation and every required check explicitly passing
+- validator produces review artifacts only and never changes GitHub variables, creates tags or publishes releases
+- hosted CI parses/guards the acceptance tooling and proves three synthetic `pending` sessions remain rejected
+- `QS3DRIBBON` provides a fail-soft runtime Ribbon bridge that resolves the real loaded `Autodesk.Windows`/`AdWindows` types only inside AutoCAD
+- the Ribbon bridge has no compile-time `AdWindows.dll` reference and no `using Autodesk.Windows`; architecture guards prevent those dependencies from being added to hosted builds
+- Ribbon reconciliation is idempotent by QS3D tab identity and keeps palette/model commands available when the native Ribbon surface cannot be created
+
+This source implementation does **not** make Ribbon native-qualified. The actual runtime type/property/collection behavior, button dispatch, workspace compatibility, high-DPI behavior and light/dark visual quality remain mandatory `ribbon_surface` and `ribbon_visual_qa` native evidence gates for each supported host.
+
 ### Native/UI work still requiring AutoCAD runtime qualification
 
-- Ribbon integration. Autodesk's Ribbon/application-menu customization surface requires `AdWindows.dll`, so this should be compiled and qualified against the installed AutoCAD/ObjectARX UI runtime instead of weakening the hosted compile gate.
+- execute the exact candidate in licensed AutoCAD 2025, 2026 and 2027 and complete the evidence sessions in `docs/NATIVE-ACCEPTANCE.md`
+- verify the runtime Ribbon bridge against the installed AutoCAD/ObjectARX UI runtime and record the mandatory Ribbon surface/visual checks
 - full 3D entity jig/live-solid previews beyond AutoCAD's built-in rubber-band point prompts
 - native interactive Grid snapping/reshaping from Grid bindings
 - additional bulk Level/Grid operations such as multi-select rename/resequence and visual drag/reorder where they add model semantics
@@ -106,9 +122,9 @@ These items are intentionally not represented as complete by source-only placeho
 
 ## Acceptance gates
 
-A green source CI run proves that Core, both Autodesk API compile targets, bundle metadata, Setup.exe, engineering packaging, provenance and checksums succeed. It does **not** prove AutoCAD runtime behavior or production signing.
+A green source CI run proves that Core, both Autodesk API compile targets, bundle metadata, Setup.exe, engineering packaging, provenance/checksums, Ribbon bridge source boundaries and native-evidence tooling succeed. It does **not** prove AutoCAD runtime behavior, Ribbon visual behavior or production signing.
 
-Native acceptance must use a real licensed AutoCAD installation for every supported host generation and verify discovery/autoload, all commands, browser selection sync, property editing, Level/Grid assign/move/bind/clear/delete operations, undo/redo, save/reopen persistence, BOQ semantics, restart behavior, install/upgrade/uninstall and exact-build provenance.
+Native acceptance must use a real licensed AutoCAD installation for every supported host generation and verify discovery/autoload, all commands, browser selection sync, property editing, Level/Grid assign/move/bind/clear/delete operations, Ribbon surface/button behavior, undo/redo, save/reopen persistence, BOQ semantics, restart behavior, install/upgrade/uninstall and exact-build provenance.
 
 A production tag additionally requires the exact native-accepted SHA and real Authenticode credentials; the release workflow must remain fail-closed if either is absent or stale.
 
