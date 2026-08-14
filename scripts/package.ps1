@@ -1,7 +1,5 @@
 param(
-    [string]$Version = '0.1.0',
-    [string]$AutoCAD2026SdkDir = $env:AUTOCAD_2026_SDK_DIR,
-    [string]$AutoCAD2027SdkDir = $env:AUTOCAD_2027_SDK_DIR
+    [string]$Version = '0.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,9 +13,6 @@ $zip = Join-Path $artifacts "QS3D-AutoCAD-$Version.zip"
 $setupOutput = Join-Path $artifacts 'setup-publish'
 $setupExe = Join-Path $artifacts "QS3D-AutoCAD-$Version-Setup.exe"
 
-if (-not $AutoCAD2026SdkDir) { throw 'AUTOCAD_2026_SDK_DIR is required.' }
-if (-not $AutoCAD2027SdkDir) { throw 'AUTOCAD_2027_SDK_DIR is required.' }
-
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $setupOutput -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
@@ -28,8 +23,8 @@ $manifest = Join-Path $stage 'PackageContents.xml'
 $xml.ApplicationPackage.AppVersion = $Version
 $xml.Save($manifest)
 
-dotnet build $project -c Release -f net8.0-windows "-p:AutoCADSdkDir=$AutoCAD2026SdkDir"
-dotnet build $project -c Release -f net10.0-windows "-p:AutoCADSdkDir=$AutoCAD2027SdkDir"
+dotnet build $project -c Release -f net8.0-windows
+dotnet build $project -c Release -f net10.0-windows
 
 $payloads = @(
     @{ Framework = 'net8.0-windows'; Folder = '2025-2026' },
