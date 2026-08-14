@@ -31,12 +31,37 @@ dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net8.0-windows
 dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net10.0-windows
 ```
 
-The host build intentionally fails with an explicit error if the corresponding Autodesk SDK directory is not configured.
+The host build intentionally fails with an explicit error if the corresponding Autodesk SDK directory is not configured. GitHub-hosted CI therefore validates Core and source/package boundaries; native host compilation belongs on the SDK-equipped runner.
 
-## Package
+## Package and Setup.exe
 
 ```powershell
 ./scripts/package.ps1 -Version 0.1.0
 ```
 
-The generated zip is written under `artifacts/` and contains `QS3D.bundle` with separate 2025–2026 and 2027 payloads.
+The packaging script builds both host generations, stages `QS3D.bundle`, and writes:
+
+```text
+artifacts/QS3D-AutoCAD-0.1.0.zip
+artifacts/QS3D-AutoCAD-0.1.0-Setup.exe
+```
+
+The setup executable is a self-contained Windows x64 application with the bundle embedded inside it. Run it elevated to install or upgrade QS3D for all users. To remove the plugin:
+
+```powershell
+./QS3D-AutoCAD-0.1.0-Setup.exe --uninstall
+```
+
+The PowerShell install/uninstall scripts under `installer/` remain available for development and troubleshooting.
+
+## Native acceptance
+
+A successful source CI run is not a native AutoCAD qualification. For each supported runtime generation, test a bundle built from the exact commit and verify:
+
+1. AutoCAD discovers the bundle without manual `NETLOAD`.
+2. `QS3D` lazy-loads the plugin and opens the palette.
+3. Every modelling command creates expected geometry and participates in AutoCAD undo/redo.
+4. `QS3DBOQ` sees only QS3D-tagged geometry and reports correct quantities.
+5. Save, close and reopen the DWG; project state and XData must persist.
+6. Restart AutoCAD and repeat command invocation to verify autoload behavior.
+7. Install, upgrade and `--uninstall` the generated Setup.exe.
