@@ -47,6 +47,7 @@ internal static class Qs3dPalette
         AddCommandButton(_referencesPanel, "assignLevel", "QS3DASSIGNLEVEL");
         AddCommandButton(_referencesPanel, "moveLevel", "QS3DLEVELMOVE");
         AddCommandButton(_referencesPanel, "bindGrid", "QS3DBINDGRID");
+        AddCommandButton(_referencesPanel, "clearRefs", "QS3DCLEARREFS");
         AddCommandButton(_referencesPanel, "gridArray", "QS3DGRIDARRAY");
         AddCommandButton(_referencesPanel, "referenceDelete", "QS3DREFERENCEDELETE");
         AddCommandButton(_referencesPanel, "referenceList", "QS3DREFERENCES");
