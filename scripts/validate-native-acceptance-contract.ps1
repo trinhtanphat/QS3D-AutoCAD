@@ -52,6 +52,7 @@ $criticalChecks = @(
     'browser_selection_sync',
     'level_dependency_propagation',
     'grid_dependency_safety',
+    'reference_manager_lifecycle',
     'jig_live_solid_preview',
     'jig_cancel_safety',
     'grid_geometry_snap',

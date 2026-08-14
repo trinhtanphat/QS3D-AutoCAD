@@ -7,6 +7,7 @@
     { "id": "runtime_identity", "description": "Record the CLR version observed inside the loaded QS3D plugin and verify it matches the expected host runtime family." },
     { "id": "level_workflow", "description": "Create/edit Level and verify linked annotation and metadata." },
     { "id": "grid_workflow", "description": "Create/edit Grid, Grid array and dependency/reference operations." },
+    { "id": "reference_manager_lifecycle", "description": "Rename a Level/Grid without changing its semantic GUID or dependent bindings; bulk sequence Levels by elevation; resequence a selected parallel Grid family by spatial order; verify labels, duplicate/collision safety, undo/redo and save/reopen persistence." },
     { "id": "column_workflow", "description": "Create/edit Column geometry and metadata." },
     { "id": "beam_workflow", "description": "Create/edit Beam geometry and metadata." },
     { "id": "slab_workflow", "description": "Create/edit Slab geometry and metadata." },
