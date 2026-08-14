@@ -14,6 +14,7 @@
     { "id": "wall_workflow", "description": "Create/edit Wall geometry and metadata." },
     { "id": "curtain_workflow", "description": "Create/edit Curtain geometry and metadata." },
     { "id": "jig_live_solid_preview", "description": "QS3DCOLUMNJIG/QS3DBEAMJIG/QS3DSLABJIG/QS3DWALLJIG/QS3DCURTAINJIG show transient 3D solids or panels that track cursor sampling before commit." },
+    { "id": "jig_live_dimensions_orientation", "description": "During each JIG drag, transient dimension/orientation text tracks the current cursor-derived geometry: Column W/D/H, Beam/Wall length-section-angle, Slab X/Y/thickness/area, and Curtain length/panel width/angle. The text disappears on cancel/commit and is never stored in DWG metadata." },
     { "id": "jig_cancel_safety", "description": "Cancel/ESC during every JIG command leaves no new DWG entity, QS3D XData, browser row or BOQ quantity." },
     { "id": "grid_geometry_snap", "description": "QS3DGRIDSNAP moves/rebuilds bound structural geometry and metadata together, preserves Level/Z semantics, keeps BOQ aligned, and rejects invalid parallel two-Grid Column intersections." },
     { "id": "section_workflow", "description": "Create/edit Section marker and linked annotation." },
