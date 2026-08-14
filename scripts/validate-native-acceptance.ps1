@@ -73,105 +73,105 @@ foreach ($path in $EvidencePaths) {
     $fileName = Split-Path -Leaf $path
 
     if ($evidence.schemaVersion -ne 1 -or $evidence.product -ne 'QS3D AutoCAD') {
-        throw "$fileName: unsupported evidence schema/product."
+        throw "${fileName}: unsupported evidence schema/product."
     }
     if ([string]$evidence.sessionId -notmatch '^[0-9a-f]{32}$') {
-        throw "$fileName: invalid sessionId."
+        throw "${fileName}: invalid sessionId."
     }
     foreach ($timestampName in @('createdAtUtc','updatedAtUtc')) {
         $parsed = [DateTimeOffset]::MinValue
         if (-not [DateTimeOffset]::TryParse([string]$evidence.$timestampName, [ref]$parsed)) {
-            throw "$fileName: invalid $timestampName."
+            throw "${fileName}: invalid $timestampName."
         }
     }
 
     if ([string]$evidence.candidate.version -ne $Version) {
-        throw "$fileName: candidate version mismatch; expected $Version, got $($evidence.candidate.version)."
+        throw "${fileName}: candidate version mismatch; expected $Version, got $($evidence.candidate.version)."
     }
     if (([string]$evidence.candidate.sourceCommit).ToLowerInvariant() -ne $ExpectedCommit) {
-        throw "$fileName: candidate source SHA mismatch; expected $ExpectedCommit, got $($evidence.candidate.sourceCommit)."
+        throw "${fileName}: candidate source SHA mismatch; expected $ExpectedCommit, got $($evidence.candidate.sourceCommit)."
     }
     if ([bool]$evidence.candidate.signed -ne [bool]$provenance.signed) {
-        throw "$fileName: candidate signing state does not match release provenance."
+        throw "${fileName}: candidate signing state does not match release provenance."
     }
     if ($RequireSignedCandidate -and -not [bool]$evidence.candidate.signed) {
-        throw "$fileName: signed native acceptance evidence was required."
+        throw "${fileName}: signed native acceptance evidence was required."
     }
 
     $candidateArtifacts = @($evidence.candidate.artifacts)
     if ($candidateArtifacts.Count -ne $provenanceArtifacts.Count) {
-        throw "$fileName: artifact record count does not match release provenance."
+        throw "${fileName}: artifact record count does not match release provenance."
     }
     $seenArtifactNames = @{}
     foreach ($artifact in $candidateArtifacts) {
         $name = [string]$artifact.file
-        if ($seenArtifactNames.ContainsKey($name)) { throw "$fileName: duplicate candidate artifact '$name'." }
+        if ($seenArtifactNames.ContainsKey($name)) { throw "${fileName}: duplicate candidate artifact '$name'." }
         $seenArtifactNames[$name] = $true
-        if (-not $provenanceArtifacts.ContainsKey($name)) { throw "$fileName: unknown candidate artifact '$name'." }
+        if (-not $provenanceArtifacts.ContainsKey($name)) { throw "${fileName}: unknown candidate artifact '$name'." }
         $expectedArtifact = $provenanceArtifacts[$name]
         if (([string]$artifact.sha256).ToLowerInvariant() -ne $expectedArtifact.sha256 -or [int64]$artifact.bytes -ne $expectedArtifact.bytes) {
-            throw "$fileName: candidate artifact hash/size mismatch for '$name'."
+            throw "${fileName}: candidate artifact hash/size mismatch for '$name'."
         }
     }
 
     $generation = [string]$evidence.host.generation
     if ($generation -notin @('2025','2026','2027')) {
-        throw "$fileName: invalid AutoCAD generation '$generation'."
+        throw "${fileName}: invalid AutoCAD generation '$generation'."
     }
     $expectedRuntime = if ($generation -eq '2027') { '.NET 10' } else { '.NET 8' }
     if ([string]$evidence.host.expectedRuntimeFamily -ne $expectedRuntime) {
-        throw "$fileName: expected runtime family must be $expectedRuntime for AutoCAD $generation."
+        throw "${fileName}: expected runtime family must be $expectedRuntime for AutoCAD $generation."
     }
     if ([string]::IsNullOrWhiteSpace([string]$evidence.host.observedClrVersion)) {
-        throw "$fileName: observedClrVersion is missing. Record it with record-native-runtime.ps1 after loading QS3D in AutoCAD."
+        throw "${fileName}: observedClrVersion is missing. Record it with record-native-runtime.ps1 after loading QS3D in AutoCAD."
     }
     if ([string]$evidence.host.observedClrVersion -notmatch '^(?<major>\d+)\.') {
-        throw "$fileName: observed CLR version is malformed: $($evidence.host.observedClrVersion)."
+        throw "${fileName}: observed CLR version is malformed: $($evidence.host.observedClrVersion)."
     }
     $expectedMajor = if ($generation -eq '2027') { 10 } else { 8 }
     if ([int]$Matches.major -ne $expectedMajor) {
-        throw "$fileName: observed CLR $($evidence.host.observedClrVersion) does not match expected $expectedRuntime."
+        throw "${fileName}: observed CLR $($evidence.host.observedClrVersion) does not match expected $expectedRuntime."
     }
     if ([string]::IsNullOrWhiteSpace([string]$evidence.host.productName) -or [string]$evidence.host.productName -notmatch 'AutoCAD') {
-        throw "$fileName: host productName does not identify AutoCAD."
+        throw "${fileName}: host productName does not identify AutoCAD."
     }
     foreach ($field in @('acadExe','fileVersion','productVersion')) {
         if ([string]::IsNullOrWhiteSpace([string]$evidence.host.$field)) {
-            throw "$fileName: host $field is missing."
+            throw "${fileName}: host $field is missing."
         }
     }
     foreach ($field in @('name','machine')) {
         if ([string]::IsNullOrWhiteSpace([string]$evidence.operator.$field)) {
-            throw "$fileName: operator $field is missing."
+            throw "${fileName}: operator $field is missing."
         }
     }
 
     $checks = @($evidence.checks)
     $ids = @($checks | ForEach-Object { [string]$_.id })
     if ($checks.Count -ne $requiredIds.Count -or @($ids | Select-Object -Unique).Count -ne $ids.Count) {
-        throw "$fileName: evidence must contain every required check exactly once."
+        throw "${fileName}: evidence must contain every required check exactly once."
     }
     foreach ($requiredId in $requiredIds) {
         if ($ids -notcontains $requiredId) {
-            throw "$fileName: missing required check '$requiredId'."
+            throw "${fileName}: missing required check '$requiredId'."
         }
     }
     foreach ($id in $ids) {
         if ($requiredIds -notcontains $id) {
-            throw "$fileName: unknown check '$id'."
+            throw "${fileName}: unknown check '$id'."
         }
     }
 
     foreach ($check in $checks) {
         if ([string]$check.status -ne 'pass') {
-            throw "$fileName: native check '$($check.id)' is '$($check.status)', not pass. Hosted CI must not override this."
+            throw "${fileName}: native check '$($check.id)' is '$($check.status)', not pass. Hosted CI must not override this."
         }
         if ([string]::IsNullOrWhiteSpace([string]$check.notes)) {
-            throw "$fileName: passing check '$($check.id)' must include evidence notes."
+            throw "${fileName}: passing check '$($check.id)' must include evidence notes."
         }
         $recorded = [DateTimeOffset]::MinValue
         if (-not [DateTimeOffset]::TryParse([string]$check.recordedAtUtc, [ref]$recorded)) {
-            throw "$fileName: passing check '$($check.id)' has no valid recordedAtUtc timestamp."
+            throw "${fileName}: passing check '$($check.id)' has no valid recordedAtUtc timestamp."
         }
     }
 
@@ -196,7 +196,8 @@ foreach ($requiredGeneration in @('2025','2026','2027')) {
         throw "Native acceptance requires exactly one passing AutoCAD $requiredGeneration session."
     }
 }
-if (@($evidenceRecords.sessionId | Select-Object -Unique).Count -ne 3) {
+$sessionIds = @($evidenceRecords | ForEach-Object { $_.sessionId } | Select-Object -Unique)
+if ($sessionIds.Count -ne 3) {
     throw 'Native acceptance evidence sessions must have distinct sessionId values.'
 }
 
