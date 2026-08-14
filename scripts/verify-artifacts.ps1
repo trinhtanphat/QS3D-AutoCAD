@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
-    [string]$ExpectedCommit = ''
+    [string]$ExpectedCommit = '',
+    [switch]$RequireSigned
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,6 +46,7 @@ if ($manifest.product -ne 'QS3D AutoCAD') { throw "Unexpected release product: $
 if ($manifest.version -ne $Version) { throw "Provenance version mismatch: expected $Version, got $($manifest.version)" }
 if ([string]$manifest.sourceCommit -ne $ExpectedCommit) { throw "Provenance source commit mismatch: expected $ExpectedCommit, got $($manifest.sourceCommit)" }
 if ($manifest.sourceDirty -ne $false) { throw 'Release provenance reports a dirty source tree.' }
+if ($RequireSigned -and $manifest.signed -ne $true) { throw 'A signed release was required but provenance reports signed=false.' }
 
 $matrix = @($manifest.runtimeMatrix)
 if ($matrix.Count -ne 2) { throw 'Release provenance must contain exactly two AutoCAD runtime families.' }
