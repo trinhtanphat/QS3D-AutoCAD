@@ -62,7 +62,7 @@ public sealed class Qs3dGridSnapCommands
                 endGrid?.Metadata.ToCore());
             updated = Qs3dEntityMetadata.FromCore(snapped);
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        catch (System.Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {
             editor.WriteMessage($"\nGrid snap rejected: {exception.Message}\n");
             return;
@@ -79,7 +79,7 @@ public sealed class Qs3dGridSnapCommands
         {
             replacement = Qs3dGeometryFactory.CreateSolid(updated);
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or Autodesk.AutoCAD.Runtime.Exception)
+        catch (System.Exception exception) when (exception is ArgumentException or InvalidOperationException or Autodesk.AutoCAD.Runtime.Exception)
         {
             editor.WriteMessage($"\nGrid snap could not rebuild geometry: {exception.Message}\n");
             return;
