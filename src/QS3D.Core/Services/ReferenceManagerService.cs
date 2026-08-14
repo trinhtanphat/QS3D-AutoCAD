@@ -18,14 +18,24 @@ public static class ReferenceManagerService
         return descending ? levels.Reverse().ToArray() : levels;
     }
 
+    public static IReadOnlyList<StructuralElement> SelectParallelGridFamily(
+        IEnumerable<StructuralElement> elements,
+        StructuralElement seedGrid,
+        double tolerance = 1e-9)
+    {
+        ValidateTolerance(tolerance);
+        var seed = CanonicalDirection(seedGrid, tolerance);
+        return elements
+            .Where(element => element.Kind == ElementKind.Grid)
+            .Where(grid => IsParallel(grid, seed, tolerance))
+            .ToArray();
+    }
+
     public static IReadOnlyList<StructuralElement> OrderParallelGrids(
         IEnumerable<StructuralElement> elements,
         double tolerance = 1e-9)
     {
-        if (!double.IsFinite(tolerance) || tolerance <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(tolerance), "Grid ordering tolerance must be finite and positive.");
-        }
+        ValidateTolerance(tolerance);
 
         var grids = elements.Where(element => element.Kind == ElementKind.Grid).ToArray();
         if (grids.Length == 0)
@@ -36,9 +46,7 @@ public static class ReferenceManagerService
         var direction = CanonicalDirection(grids[0], tolerance);
         foreach (var grid in grids.Skip(1))
         {
-            var candidate = UnitDirection(grid, tolerance);
-            var cross = Math.Abs((direction.X * candidate.Y) - (direction.Y * candidate.X));
-            if (cross > tolerance)
+            if (!IsParallel(grid, direction, tolerance))
             {
                 throw new InvalidOperationException("Grid resequencing requires one parallel Grid family.");
             }
@@ -74,6 +82,13 @@ public static class ReferenceManagerService
         return reference with { Name = name.Trim() };
     }
 
+    private static bool IsParallel(StructuralElement grid, PlanDirection reference, double tolerance)
+    {
+        var candidate = UnitDirection(grid, tolerance);
+        var cross = Math.Abs((reference.X * candidate.Y) - (reference.Y * candidate.X));
+        return cross <= tolerance;
+    }
+
     private static PlanDirection CanonicalDirection(StructuralElement grid, double tolerance)
     {
         var direction = UnitDirection(grid, tolerance);
@@ -99,6 +114,14 @@ public static class ReferenceManagerService
             throw new ArgumentException("Grid must have non-zero plan length.", nameof(grid));
         }
         return new PlanDirection(dx / length, dy / length);
+    }
+
+    private static void ValidateTolerance(double tolerance)
+    {
+        if (!double.IsFinite(tolerance) || tolerance <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(tolerance), "Grid ordering tolerance must be finite and positive.");
+        }
     }
 
     private readonly record struct PlanDirection(double X, double Y);
