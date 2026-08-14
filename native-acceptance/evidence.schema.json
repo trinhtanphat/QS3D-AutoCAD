@@ -48,11 +48,21 @@
     "host": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generation", "expectedRuntimeFamily", "acadExe", "fileVersion", "productVersion"],
+      "required": [
+        "generation",
+        "expectedRuntimeFamily",
+        "observedClrVersion",
+        "acadExe",
+        "productName",
+        "fileVersion",
+        "productVersion"
+      ],
       "properties": {
         "generation": { "enum": ["2025", "2026", "2027"] },
         "expectedRuntimeFamily": { "enum": [".NET 8", ".NET 10"] },
+        "observedClrVersion": { "type": ["string", "null"], "minLength": 1 },
         "acadExe": { "type": "string", "minLength": 1 },
+        "productName": { "type": "string", "minLength": 1 },
         "fileVersion": { "type": "string", "minLength": 1 },
         "productVersion": { "type": "string", "minLength": 1 }
       }
