@@ -10,9 +10,9 @@ QS3D AutoCAD is the Autodesk AutoCAD host for QS3D structural modelling and quan
 - deployment uses an AutoCAD `.bundle`
 - the release pipeline produces both a portable bundle zip and a self-contained `QS3D-AutoCAD-<version>-Setup.exe`
 
-## Implemented modelling loop
+## Implemented modelling workflow
 
-Run `QS3D` to lazy-load the plugin and open the dockable command palette. The current host implements:
+Run `QS3D` to lazy-load the plugin and open the dockable QS3D workspace. The current host implements:
 
 - `QS3DINIT` — initialize/rename the DWG-backed QS3D project
 - `QS3DLEVEL` — level marker
@@ -24,9 +24,13 @@ Run `QS3D` to lazy-load the plugin and open the dockable command palette. The cu
 - `QS3DCURTAIN` — modular curtain panels
 - `QS3DSECTION` — section marker
 - `QS3DBOQ` — quantity summary from QS3D-tagged entities
+- `QS3DEDIT` — edit QS3D properties while rebuilding physical solids when dimensions change
+- `QS3DREFRESH` — refresh the model browser
 - `QS3DABOUT` — host/runtime information
 
-Generated geometry carries typed QS3D XData. Project identity/name is stored in the DWG Named Objects Dictionary, so QS3D state travels with the drawing.
+The dockable workspace has a Tools tab plus a Project tab. The project browser lists QS3D-owned entities, synchronizes with AutoCAD pickfirst selection, exposes geometry and quantity properties, and can launch safe editing. Palette controls can switch between Vietnamese and English.
+
+Generated geometry carries typed QS3D XData. Project identity/name is stored in the DWG Named Objects Dictionary, so QS3D state travels with the drawing. Solid property edits preserve QS3D semantic IDs while replacing geometry, preventing BOQ metadata from diverging from the visible model.
 
 ## Build and delivery
 
@@ -36,9 +40,10 @@ GitHub `CI` builds and smoke-tests the host-neutral Core, compiles both AutoCAD 
 
 - `artifacts/QS3D-AutoCAD-<version>.zip`
 - `artifacts/QS3D-AutoCAD-<version>-Setup.exe`
+- `artifacts/SHA256SUMS.txt`
 
-The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory; `--uninstall` removes it.
+The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory; `--uninstall` removes it. Tag builds use the release workflow to publish prerelease assets once native acceptance is complete.
 
-A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, undo/redo and DWG persistence.
+A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, editing, undo/redo, save/reopen persistence and installer behavior.
 
 See `docs/IMPLEMENTATION-PLAN.md` and `docs/BUILD.md` for architecture, build and native acceptance gates.

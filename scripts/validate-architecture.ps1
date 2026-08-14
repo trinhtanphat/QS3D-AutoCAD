@@ -1,14 +1,14 @@
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $core = Join-Path $repo 'src\QS3D.Core'
-$hostCommands = Join-Path $repo 'src\QS3D.AutoCAD\Commands\Qs3dCommands.cs'
+$commandRoot = Join-Path $repo 'src\QS3D.AutoCAD\Commands'
 $manifest = Join-Path $repo 'bundle\QS3D.bundle\PackageContents.xml'
 
 $autodeskLeak = Get-ChildItem -Recurse -File $core -Filter '*.cs' | Select-String -SimpleMatch 'Autodesk.AutoCAD'
 if ($autodeskLeak) { throw 'Architecture violation: QS3D.Core references Autodesk.AutoCAD.' }
 
-$requiredCommands = @('QS3D','QS3DABOUT','QS3DINIT','QS3DLEVEL','QS3DGRID','QS3DCOLUMN','QS3DBEAM','QS3DSLAB','QS3DWALL','QS3DCURTAIN','QS3DSECTION','QS3DBOQ')
-$source = Get-Content -Raw $hostCommands
+$requiredCommands = @('QS3D','QS3DABOUT','QS3DINIT','QS3DLEVEL','QS3DGRID','QS3DCOLUMN','QS3DBEAM','QS3DSLAB','QS3DWALL','QS3DCURTAIN','QS3DSECTION','QS3DBOQ','QS3DEDIT','QS3DREFRESH')
+$source = (Get-ChildItem -File $commandRoot -Filter '*.cs' | ForEach-Object { Get-Content -Raw $_.FullName }) -join "`n"
 foreach ($command in $requiredCommands) {
     if ($source -notmatch [regex]::Escape("CommandMethod(`"$command`"")) {
         throw "Missing command registration: $command"

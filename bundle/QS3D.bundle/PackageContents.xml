@@ -17,6 +17,8 @@
         <Command Global="QS3DCURTAIN" Local="QS3DCURTAIN" />
         <Command Global="QS3DSECTION" Local="QS3DSECTION" />
         <Command Global="QS3DBOQ" Local="QS3DBOQ" />
+        <Command Global="QS3DEDIT" Local="QS3DEDIT" />
+        <Command Global="QS3DREFRESH" Local="QS3DREFRESH" />
       </Commands>
     </ComponentEntry>
   </Components>
@@ -36,6 +38,8 @@
         <Command Global="QS3DCURTAIN" Local="QS3DCURTAIN" />
         <Command Global="QS3DSECTION" Local="QS3DSECTION" />
         <Command Global="QS3DBOQ" Local="QS3DBOQ" />
+        <Command Global="QS3DEDIT" Local="QS3DEDIT" />
+        <Command Global="QS3DREFRESH" Local="QS3DREFRESH" />
       </Commands>
     </ComponentEntry>
   </Components>
