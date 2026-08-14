@@ -11,6 +11,7 @@ internal static class Qs3dPalette
     private static PaletteSet? _palette;
     private static FlowLayoutPanel? _toolsPanel;
     private static FlowLayoutPanel? _referencesPanel;
+    private static FlowLayoutPanel? _livePreviewPanel;
     private static Qs3dBrowserControl? _browser;
 
     public static void Show()
@@ -43,10 +44,18 @@ internal static class Qs3dPalette
         AddCommandButton(_toolsPanel, "boq", "QS3DBOQ");
         AddCommandButton(_toolsPanel, "about", "QS3DABOUT");
 
+        _livePreviewPanel = CreateCommandPanel();
+        AddCommandButton(_livePreviewPanel, "columnLive", "QS3DCOLUMNJIG");
+        AddCommandButton(_livePreviewPanel, "beamLive", "QS3DBEAMJIG");
+        AddCommandButton(_livePreviewPanel, "slabLive", "QS3DSLABJIG");
+        AddCommandButton(_livePreviewPanel, "wallLive", "QS3DWALLJIG");
+        AddCommandButton(_livePreviewPanel, "curtainLive", "QS3DCURTAINJIG");
+
         _referencesPanel = CreateCommandPanel();
         AddCommandButton(_referencesPanel, "assignLevel", "QS3DASSIGNLEVEL");
         AddCommandButton(_referencesPanel, "moveLevel", "QS3DLEVELMOVE");
         AddCommandButton(_referencesPanel, "bindGrid", "QS3DBINDGRID");
+        AddCommandButton(_referencesPanel, "gridSnap", "QS3DGRIDSNAP");
         AddCommandButton(_referencesPanel, "clearRefs", "QS3DCLEARREFS");
         AddCommandButton(_referencesPanel, "gridArray", "QS3DGRIDARRAY");
         AddCommandButton(_referencesPanel, "referenceDelete", "QS3DREFERENCEDELETE");
@@ -54,6 +63,7 @@ internal static class Qs3dPalette
 
         _browser = new Qs3dBrowserControl();
         palette.Add(UiText.Get("tools"), _toolsPanel);
+        palette.Add(UiText.Get("livePreviewTab"), _livePreviewPanel);
         palette.Add(UiText.Get("project"), _browser);
         palette.Add(UiText.Get("referencesTab"), _referencesPanel);
 
@@ -91,6 +101,7 @@ internal static class Qs3dPalette
     private static void ApplyCommandLanguage()
     {
         ApplyPanelLanguage(_toolsPanel);
+        ApplyPanelLanguage(_livePreviewPanel);
         ApplyPanelLanguage(_referencesPanel);
     }
 
