@@ -81,7 +81,12 @@ foreach ($requirement in @('GetProcessesByName("acad")', '.QS3D.bundle.install-'
     }
 }
 
-foreach ($requiredDoc in @('docs\RELEASE-SECURITY.md', 'docs\PRIVACY.md', 'docs\NATIVE-ACCEPTANCE.md')) {
+foreach ($requiredDoc in @(
+    'docs\RELEASE-SECURITY.md',
+    'docs\PRIVACY.md',
+    'docs\NATIVE-ACCEPTANCE.md',
+    'docs\NATIVE-CANDIDATE-HANDOFF.md'
+)) {
     if (-not (Test-Path (Join-Path $repo $requiredDoc) -PathType Leaf)) {
         throw "Release documentation regression: missing $requiredDoc"
     }
