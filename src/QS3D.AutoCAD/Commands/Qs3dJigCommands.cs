@@ -29,12 +29,16 @@ public sealed class Qs3dJigCommands
 
         IEnumerable<Entity> Preview(Point3d point) =>
             [AutoCadDrawing.CreateAxisAlignedBox(point, width.Value, depth.Value, height.Value)];
+        Qs3dPreviewAnnotation? Annotation(Point3d _) => new(
+            $"W={width.Value:0.###}  D={depth.Value:0.###}  H={height.Value:0.###}  Ang=0deg",
+            LiveTextHeight(width.Value, depth.Value));
 
         var jig = new Qs3dPointPreviewJig(
             Point3d.Origin,
             "\nColumn base point: ",
             Preview,
-            useBasePoint: false);
+            useBasePoint: false,
+            annotationFactory: Annotation);
         var drag = jig.Drag(editor);
         if (drag.Status != PromptStatus.OK) return;
 
@@ -105,12 +109,26 @@ public sealed class Qs3dJigCommands
             }
             return [solid];
         }
+        Qs3dPreviewAnnotation? Annotation(Point3d point)
+        {
+            var normalized = Normalize(point);
+            var x = Math.Abs(normalized.X - first.Value.X);
+            var y = Math.Abs(normalized.Y - first.Value.Y);
+            if (x <= Tolerance.Global.EqualPoint || y <= Tolerance.Global.EqualPoint)
+            {
+                return null;
+            }
+            return new Qs3dPreviewAnnotation(
+                $"X={x:0.###}  Y={y:0.###}  T={thickness.Value:0.###}  A={(x * y):0.###}  Ang=0deg",
+                LiveTextHeight(thickness.Value));
+        }
 
         var jig = new Qs3dPointPreviewJig(
             first.Value,
             "\nSlab opposite corner: ",
             Preview,
-            Normalize);
+            Normalize,
+            annotationFactory: Annotation);
         var drag = jig.Drag(editor);
         if (drag.Status != PromptStatus.OK) return;
 
@@ -160,8 +178,25 @@ public sealed class Qs3dJigCommands
             module.Value,
             thickness.Value,
             height.Value).Cast<Entity>();
+        Qs3dPreviewAnnotation? Annotation(Point3d end)
+        {
+            var length = PlanLength(start.Value, end);
+            if (length <= Tolerance.Global.EqualPoint)
+            {
+                return null;
+            }
+            var panelCount = Math.Max(1, (int)Math.Ceiling(length / module.Value));
+            var panelWidth = length / panelCount;
+            return new Qs3dPreviewAnnotation(
+                $"L={length:0.###}  Panel={panelWidth:0.###}  T={thickness.Value:0.###}  H={height.Value:0.###}  Ang={PlanAngleDegrees(start.Value, end):0.##}deg",
+                LiveTextHeight(thickness.Value));
+        }
 
-        var jig = new Qs3dPointPreviewJig(start.Value, "\nCurtain end point: ", Preview);
+        var jig = new Qs3dPointPreviewJig(
+            start.Value,
+            "\nCurtain end point: ",
+            Preview,
+            annotationFactory: Annotation);
         var drag = jig.Drag(editor);
         if (drag.Status != PromptStatus.OK) return;
         var end = jig.Point;
@@ -235,8 +270,24 @@ public sealed class Qs3dJigCommands
 
         IEnumerable<Entity> Preview(Point3d end) =>
             [AutoCadDrawing.CreatePlanOrientedBox(start.Value, end, width.Value, height.Value)];
+        Qs3dPreviewAnnotation? Annotation(Point3d end)
+        {
+            var length = PlanLength(start.Value, end);
+            if (length <= Tolerance.Global.EqualPoint)
+            {
+                return null;
+            }
+            var section = isThickness ? $"T={width.Value:0.###}" : $"W={width.Value:0.###}";
+            return new Qs3dPreviewAnnotation(
+                $"L={length:0.###}  {section}  H={height.Value:0.###}  Ang={PlanAngleDegrees(start.Value, end):0.##}deg",
+                LiveTextHeight(width.Value, height.Value));
+        }
 
-        var jig = new Qs3dPointPreviewJig(start.Value, $"\n{label} end point: ", Preview);
+        var jig = new Qs3dPointPreviewJig(
+            start.Value,
+            $"\n{label} end point: ",
+            Preview,
+            annotationFactory: Annotation);
         var drag = jig.Drag(editor);
         if (drag.Status != PromptStatus.OK) return;
         var end = jig.Point;
@@ -317,6 +368,25 @@ public sealed class Qs3dJigCommands
             foreach (var solid in solids) solid.Dispose();
             throw;
         }
+    }
+
+    private static double PlanLength(Point3d start, Point3d end)
+    {
+        var dx = end.X - start.X;
+        var dy = end.Y - start.Y;
+        return Math.Sqrt((dx * dx) + (dy * dy));
+    }
+
+    private static double PlanAngleDegrees(Point3d start, Point3d end)
+    {
+        var angle = Math.Atan2(end.Y - start.Y, end.X - start.X) * (180.0 / Math.PI);
+        return angle < 0 ? angle + 360.0 : angle;
+    }
+
+    private static double LiveTextHeight(params double[] dimensions)
+    {
+        var reference = dimensions.Where(value => double.IsFinite(value) && value > 0).DefaultIfEmpty(1.0).Min();
+        return reference * 0.05;
     }
 
     private static double? PromptPositive(Editor editor, string label, double defaultValue)
