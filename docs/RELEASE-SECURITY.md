@@ -43,4 +43,11 @@ Setup refuses install, upgrade and uninstall while `acad.exe` is running. Upgrad
 
 ## Licensing and update service boundary
 
-This repository does not currently contain a production licensing backend, activation token issuer or update service. Do not add an always-allow license implementation, embed production secrets, or treat artifact checksum verification as a complete secure updater. A production updater still needs an authenticated/signed update manifest, rollback policy and native acceptance for the target AutoCAD generation.
+This repository does not contain a production licensing backend, activation token issuer or update network service. Do not add an always-allow license implementation, embed production secrets, or treat artifact checksum verification as a complete secure updater.
+
+Pure-Core client trust primitives are defined in `src/QS3D.Core/Commercial` and documented in `docs/COMMERCIAL-TRUST-BOUNDARY.md`:
+
+- `LicensePolicy` deterministically evaluates an already-authenticated lease snapshot as active, bounded offline grace or denied. It does not authenticate/issue a lease and never mutates drawing data.
+- `UpdateManifestVerifier` verifies an externally signed RSA-PSS/SHA-256 manifest with an externally configured public key, requires an HTTPS package URI, enforces update channel and AutoCAD-generation compatibility, and verifies the downloaded package SHA-256 before a future install step.
+
+Production activation still requires a real authenticated backend/token contract. Production updating still requires a real manifest/download service, protected publisher private key, rollback execution and native acceptance for the target AutoCAD generation. The plugin must never contain the updater private signing key or convert missing/invalid service state into implicit authorization.
