@@ -1,14 +1,16 @@
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $core = Join-Path $repo 'src\QS3D.Core'
+$hostProject = Join-Path $repo 'src\QS3D.AutoCAD\QS3D.AutoCAD.csproj'
 $commandRoot = Join-Path $repo 'src\QS3D.AutoCAD\Commands'
+$ribbonSourcePath = Join-Path $repo 'src\QS3D.AutoCAD\UI\Qs3dRibbon.cs'
 $manifest = Join-Path $repo 'bundle\QS3D.bundle\PackageContents.xml'
 
 $autodeskLeak = Get-ChildItem -Recurse -File $core -Filter '*.cs' | Select-String -SimpleMatch 'Autodesk.AutoCAD'
 if ($autodeskLeak) { throw 'Architecture violation: QS3D.Core references Autodesk.AutoCAD.' }
 
 $requiredCommands = @(
-    'QS3D','QS3DABOUT','QS3DINIT','QS3DLEVEL','QS3DGRID','QS3DCOLUMN','QS3DBEAM','QS3DSLAB',
+    'QS3D','QS3DABOUT','QS3DRIBBON','QS3DINIT','QS3DLEVEL','QS3DGRID','QS3DCOLUMN','QS3DBEAM','QS3DSLAB',
     'QS3DWALL','QS3DCURTAIN','QS3DSECTION','QS3DBOQ','QS3DEDIT','QS3DREFRESH',
     'QS3DASSIGNLEVEL','QS3DLEVELMOVE','QS3DBINDGRID','QS3DCLEARREFS','QS3DREFERENCEDELETE','QS3DGRIDARRAY','QS3DREFERENCES'
 )
@@ -17,6 +19,36 @@ foreach ($command in $requiredCommands) {
     if ($source -notmatch [regex]::Escape("CommandMethod(`"$command`"")) {
         throw "Missing command registration: $command"
     }
+}
+
+if (-not (Test-Path -LiteralPath $ribbonSourcePath -PathType Leaf)) {
+    throw 'QS3D Ribbon runtime bridge source is missing.'
+}
+$hostProjectSource = Get-Content -Raw -LiteralPath $hostProject
+$ribbonSource = Get-Content -Raw -LiteralPath $ribbonSourcePath
+if ($hostProjectSource -match '<Reference\s+Include=["'']AdWindows') {
+    throw 'Ribbon architecture violation: the hosted build must not add a compile-time AdWindows reference.'
+}
+if ($ribbonSource -match '(?m)^\s*using\s+Autodesk\.Windows') {
+    throw 'Ribbon architecture violation: Qs3dRibbon must remain runtime-reflection based and must not compile against Autodesk.Windows.'
+}
+foreach ($runtimeType in @(
+    'Autodesk.Windows.ComponentManager',
+    'Autodesk.Windows.RibbonTab',
+    'Autodesk.Windows.RibbonPanel',
+    'Autodesk.Windows.RibbonPanelSource',
+    'Autodesk.Windows.RibbonRow',
+    'Autodesk.Windows.RibbonButton'
+)) {
+    if (-not $ribbonSource.Contains($runtimeType, [StringComparison]::Ordinal)) {
+        throw "Ribbon runtime bridge regression: missing runtime type '$runtimeType'."
+    }
+}
+if (-not $ribbonSource.Contains('Assembly.Load("AdWindows")', [StringComparison]::Ordinal)) {
+    throw 'Ribbon runtime bridge regression: AdWindows runtime fallback is missing.'
+}
+if ($ribbonSource.Contains('PaletteSet', [StringComparison]::Ordinal)) {
+    throw 'Ribbon bridge must not own or construct the QS3D PaletteSet.'
 }
 
 [xml]$xml = Get-Content -Raw $manifest
