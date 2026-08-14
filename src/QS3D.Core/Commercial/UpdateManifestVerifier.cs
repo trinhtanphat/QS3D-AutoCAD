@@ -67,7 +67,7 @@ public static class UpdateManifestVerifier
                 throw new InvalidDataException("Update manifest signature is invalid.");
             }
         }
-        catch (CryptographicException exception)
+        catch (Exception exception) when (exception is CryptographicException or ArgumentException)
         {
             throw new InvalidDataException("Updater public key or signature is invalid.", exception);
         }
