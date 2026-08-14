@@ -10,7 +10,7 @@ on:
 
 jobs:
   package:
-    runs-on: [self-hosted, Windows, X64, autocad-sdk]
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
