@@ -3,10 +3,10 @@ $repo = Split-Path -Parent $PSScriptRoot
 $schemaPath = Join-Path $repo 'native-acceptance\evidence.schema.json'
 $checksPath = Join-Path $repo 'native-acceptance\required-checks.json'
 $scriptPaths = @(
-    Join-Path $repo 'scripts\new-native-acceptance.ps1',
-    Join-Path $repo 'scripts\record-native-runtime.ps1',
-    Join-Path $repo 'scripts\record-native-result.ps1',
-    Join-Path $repo 'scripts\validate-native-acceptance.ps1'
+    (Join-Path $repo 'scripts\new-native-acceptance.ps1')
+    (Join-Path $repo 'scripts\record-native-runtime.ps1')
+    (Join-Path $repo 'scripts\record-native-result.ps1')
+    (Join-Path $repo 'scripts\validate-native-acceptance.ps1')
 )
 
 foreach ($path in @($schemaPath, $checksPath) + $scriptPaths) {
@@ -89,10 +89,9 @@ foreach ($requiredSnippet in @(
     "@('2025','2026','2027')",
     "status -ne 'pass'",
     'distinct sessionId values',
-    'does not modify GitHub variables or publish a release',
-    'ribbon_surface'
+    'does not modify GitHub variables or publish a release'
 )) {
-    if (-not $validateSource.Contains($requiredSnippet, [StringComparison]::Ordinal) -and $requiredSnippet -ne 'ribbon_surface') {
+    if (-not $validateSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native validator regression: missing '$requiredSnippet'."
     }
 }
