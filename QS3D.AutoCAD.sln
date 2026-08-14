@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QS3D.Core", "src\QS3D.Core\QS3D.Core.csproj", "{4A9457D9-1D81-4F73-9472-277B0E34F9D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QS3D.AutoCAD", "src\QS3D.AutoCAD\QS3D.AutoCAD.csproj", "{60EB4B7B-2023-457D-A971-70DEB086B0DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QS3D.Core.SmokeTests", "tests\QS3D.Core.SmokeTests\QS3D.Core.SmokeTests.csproj", "{DD461084-5112-4A01-86AE-1B157A973454}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4A9457D9-1D81-4F73-9472-277B0E34F9D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A9457D9-1D81-4F73-9472-277B0E34F9D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A9457D9-1D81-4F73-9472-277B0E34F9D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A9457D9-1D81-4F73-9472-277B0E34F9D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60EB4B7B-2023-457D-A971-70DEB086B0DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60EB4B7B-2023-457D-A971-70DEB086B0DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60EB4B7B-2023-457D-A971-70DEB086B0DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60EB4B7B-2023-457D-A971-70DEB086B0DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD461084-5112-4A01-86AE-1B157A973454}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD461084-5112-4A01-86AE-1B157A973454}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD461084-5112-4A01-86AE-1B157A973454}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD461084-5112-4A01-86AE-1B157A973454}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
