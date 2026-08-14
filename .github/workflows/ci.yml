@@ -11,6 +11,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify exact checkout SHA
+        shell: pwsh
+        run: |
+          $expected = '${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'.ToLowerInvariant()
+          $actual = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($actual -ne $expected) {
+            throw "Checkout SHA mismatch: expected $expected, actual $actual"
+          }
+          Write-Host "Exact source SHA: $actual"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
