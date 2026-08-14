@@ -7,6 +7,7 @@ $ribbonSourcePath = Join-Path $repo 'src\QS3D.AutoCAD\UI\Qs3dRibbon.cs'
 $jigSourcePath = Join-Path $repo 'src\QS3D.AutoCAD\UI\Qs3dPointPreviewJig.cs'
 $jigCommandsPath = Join-Path $repo 'src\QS3D.AutoCAD\Commands\Qs3dJigCommands.cs'
 $gridSnapPath = Join-Path $repo 'src\QS3D.AutoCAD\Commands\Qs3dGridSnapCommands.cs'
+$referenceManagerPath = Join-Path $repo 'src\QS3D.AutoCAD\Commands\Qs3dReferenceManagerCommands.cs'
 $manifest = Join-Path $repo 'bundle\QS3D.bundle\PackageContents.xml'
 
 $autodeskLeak = Get-ChildItem -Recurse -File $core -Filter '*.cs' | Select-String -SimpleMatch 'Autodesk.AutoCAD'
@@ -16,7 +17,7 @@ $requiredCommands = @(
     'QS3D','QS3DABOUT','QS3DRIBBON','QS3DINIT','QS3DLEVEL','QS3DGRID','QS3DCOLUMN','QS3DCOLUMNJIG',
     'QS3DBEAM','QS3DBEAMJIG','QS3DSLAB','QS3DSLABJIG','QS3DWALL','QS3DWALLJIG','QS3DCURTAIN','QS3DCURTAINJIG',
     'QS3DSECTION','QS3DBOQ','QS3DEDIT','QS3DREFRESH','QS3DASSIGNLEVEL','QS3DLEVELMOVE','QS3DBINDGRID','QS3DGRIDSNAP',
-    'QS3DCLEARREFS','QS3DREFERENCEDELETE','QS3DGRIDARRAY','QS3DREFERENCES'
+    'QS3DREFERENCERENAME','QS3DLEVELSEQUENCE','QS3DGRIDSEQUENCE','QS3DCLEARREFS','QS3DREFERENCEDELETE','QS3DGRIDARRAY','QS3DREFERENCES'
 )
 $source = (Get-ChildItem -File $commandRoot -Filter '*.cs' | ForEach-Object { Get-Content -Raw $_.FullName }) -join "`n"
 foreach ($command in $requiredCommands) {
@@ -55,21 +56,25 @@ if (-not $ribbonSource.Contains('Assembly.Load("AdWindows")', [StringComparison]
 if ($ribbonSource.Contains('PaletteSet', [StringComparison]::Ordinal)) {
     throw 'Ribbon bridge must not own or construct the QS3D PaletteSet.'
 }
-foreach ($command in @('QS3DCOLUMNJIG','QS3DBEAMJIG','QS3DSLABJIG','QS3DWALLJIG','QS3DCURTAINJIG','QS3DGRIDSNAP')) {
+foreach ($command in @(
+    'QS3DCOLUMNJIG','QS3DBEAMJIG','QS3DSLABJIG','QS3DWALLJIG','QS3DCURTAINJIG','QS3DGRIDSNAP',
+    'QS3DREFERENCERENAME','QS3DLEVELSEQUENCE','QS3DGRIDSEQUENCE'
+)) {
     if (-not $ribbonSource.Contains($command, [StringComparison]::Ordinal)) {
-        throw "Ribbon advanced modelling regression: missing $command."
+        throw "Ribbon workflow regression: missing $command."
     }
 }
 
-foreach ($path in @($jigSourcePath, $jigCommandsPath, $gridSnapPath)) {
+foreach ($path in @($jigSourcePath, $jigCommandsPath, $gridSnapPath, $referenceManagerPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        throw "Advanced modelling source file is missing: $path"
+        throw "Advanced modelling/manager source file is missing: $path"
     }
 }
 
 $jigSource = Get-Content -Raw -LiteralPath $jigSourcePath
 $jigCommands = Get-Content -Raw -LiteralPath $jigCommandsPath
 $gridSnapSource = Get-Content -Raw -LiteralPath $gridSnapPath
+$referenceManagerSource = Get-Content -Raw -LiteralPath $referenceManagerPath
 foreach ($requiredSnippet in @('DrawJig', 'editor.Drag(this)', 'JigPromptPointOptions', 'AcquirePoint', 'WorldDraw', 'entity.WorldDraw(draw)')) {
     if (-not $jigSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Jig preview regression: missing '$requiredSnippet'."
@@ -116,6 +121,32 @@ $gridSnapErase = $gridSnapSource.IndexOf('original.Erase()', [StringComparison]:
 $gridSnapCommit = $gridSnapSource.IndexOf('transaction.Commit()', [StringComparison]::Ordinal)
 if ($gridSnapRebuild -lt 0 -or $gridSnapAttach -lt $gridSnapRebuild -or $gridSnapErase -lt $gridSnapAttach -or $gridSnapCommit -lt $gridSnapErase) {
     throw 'Grid snap transaction regression: rebuild, metadata attach, old-entity erase and commit ordering changed.'
+}
+
+foreach ($requiredSnippet in @(
+    'CommandMethod("QS3DREFERENCERENAME"',
+    'CommandMethod("QS3DLEVELSEQUENCE"',
+    'CommandMethod("QS3DGRIDSEQUENCE"',
+    'ReferenceManagerService.RenameReference',
+    'ReferenceManagerService.OrderLevels',
+    'ReferenceManagerService.SelectParallelGridFamily',
+    'ReferenceManagerService.OrderParallelGrids',
+    'UpdateLinkedAnnotation',
+    'updated.Attach',
+    'Qs3dVisualLink.TryReadParentId'
+)) {
+    if (-not $referenceManagerSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
+        throw "Reference manager regression: missing '$requiredSnippet'."
+    }
+}
+foreach ($forbiddenSnippet in @('TransformBy(', 'AutoCadDrawing.Append(', '.Erase()')) {
+    if ($referenceManagerSource.Contains($forbiddenSnippet, [StringComparison]::Ordinal)) {
+        throw "Reference manager rename/resequence must not mutate reference geometry: found '$forbiddenSnippet'."
+    }
+}
+if (-not $referenceManagerSource.Contains('item.Metadata.Id != excludeId', [StringComparison]::Ordinal) -or
+    -not $referenceManagerSource.Contains('StringComparison.OrdinalIgnoreCase', [StringComparison]::Ordinal)) {
+    throw 'Reference manager must retain case-insensitive duplicate-name protection without replacing semantic ids.'
 }
 
 [xml]$xml = Get-Content -Raw $manifest

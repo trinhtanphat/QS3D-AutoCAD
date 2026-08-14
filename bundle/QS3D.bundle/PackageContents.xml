@@ -29,6 +29,9 @@
         <Command Global="QS3DLEVELMOVE" Local="QS3DLEVELMOVE" />
         <Command Global="QS3DBINDGRID" Local="QS3DBINDGRID" />
         <Command Global="QS3DGRIDSNAP" Local="QS3DGRIDSNAP" />
+        <Command Global="QS3DREFERENCERENAME" Local="QS3DREFERENCERENAME" />
+        <Command Global="QS3DLEVELSEQUENCE" Local="QS3DLEVELSEQUENCE" />
+        <Command Global="QS3DGRIDSEQUENCE" Local="QS3DGRIDSEQUENCE" />
         <Command Global="QS3DCLEARREFS" Local="QS3DCLEARREFS" />
         <Command Global="QS3DREFERENCEDELETE" Local="QS3DREFERENCEDELETE" />
         <Command Global="QS3DGRIDARRAY" Local="QS3DGRIDARRAY" />
@@ -64,6 +67,9 @@
         <Command Global="QS3DLEVELMOVE" Local="QS3DLEVELMOVE" />
         <Command Global="QS3DBINDGRID" Local="QS3DBINDGRID" />
         <Command Global="QS3DGRIDSNAP" Local="QS3DGRIDSNAP" />
+        <Command Global="QS3DREFERENCERENAME" Local="QS3DREFERENCERENAME" />
+        <Command Global="QS3DLEVELSEQUENCE" Local="QS3DLEVELSEQUENCE" />
+        <Command Global="QS3DGRIDSEQUENCE" Local="QS3DGRIDSEQUENCE" />
         <Command Global="QS3DCLEARREFS" Local="QS3DCLEARREFS" />
         <Command Global="QS3DREFERENCEDELETE" Local="QS3DREFERENCEDELETE" />
         <Command Global="QS3DGRIDARRAY" Local="QS3DGRIDARRAY" />
