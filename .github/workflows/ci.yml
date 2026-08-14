@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  core-host-and-guards:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Build Core
+        run: dotnet build src/QS3D.Core/QS3D.Core.csproj -c Release
+      - name: Smoke .NET 8
+        run: dotnet run --project tests/QS3D.Core.SmokeTests/QS3D.Core.SmokeTests.csproj -c Release -f net8.0
+      - name: Smoke .NET 10
+        run: dotnet run --project tests/QS3D.Core.SmokeTests/QS3D.Core.SmokeTests.csproj -c Release -f net10.0
+      - name: Build AutoCAD 2025-2026 host
+        run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net8.0-windows
+      - name: Build AutoCAD 2027 host
+        run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net10.0-windows
+      - name: Architecture and bundle guards
+        shell: pwsh
+        run: ./scripts/validate-architecture.ps1
+      - name: Compile Setup.exe with embedded fixture bundle
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $env:RUNNER_TEMP 'QS3D-fixture.zip'
+          Compress-Archive -Path 'bundle/QS3D.bundle/PackageContents.xml' -DestinationPath $fixture
+          dotnet publish installer/QS3D.Setup/QS3D.Setup.csproj -c Release -r win-x64 --self-contained true "-p:BundleZipPath=$fixture" -o (Join-Path $env:RUNNER_TEMP 'setup')
+          if (-not (Test-Path (Join-Path $env:RUNNER_TEMP 'setup/QS3D-AutoCAD-Setup.exe'))) { throw 'Setup executable was not produced.' }

@@ -1,0 +1,42 @@
+name: Release QS3D AutoCAD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Build release payloads
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$') {
+            throw "Release tag must be SemVer-like (for example v0.1.0): $tag"
+          }
+          ./scripts/package.ps1 -Version $Matches.version
+      - name: Create GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = $tag.Substring(1)
+          gh release create $tag `
+            "artifacts/QS3D-AutoCAD-$version.zip" `
+            "artifacts/QS3D-AutoCAD-$version-Setup.exe" `
+            "artifacts/SHA256SUMS.txt" `
+            --title "QS3D AutoCAD $tag" `
+            --generate-notes `
+            --prerelease

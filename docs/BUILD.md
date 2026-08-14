@@ -5,16 +5,13 @@
 - Visual Studio 2022 or a current .NET SDK toolchain
 - .NET 8 SDK for AutoCAD 2025–2026
 - .NET 10 SDK for AutoCAD 2027
-- Autodesk AutoCAD/ObjectARX Managed SDK files containing `AcCoreMgd.dll`, `AcDbMgd.dll` and `AcMgd.dll`
 
-Set one or both environment variables:
+The project uses Autodesk-owned NuGet packages for compile-time AutoCAD API references:
 
-```powershell
-$env:AUTOCAD_2026_SDK_DIR = 'C:\Autodesk\ObjectARX 2026\inc'
-$env:AUTOCAD_2027_SDK_DIR = 'C:\Autodesk\ObjectARX 2027\inc'
-```
+- `AutoCAD.NET` 25.0.1 for the .NET 8 host
+- `AutoCAD.NET` 26.0.0 for the .NET 10 host
 
-Use the directory that actually contains the three managed DLLs on your machine.
+Their runtime assets are excluded from QS3D output because AutoCAD supplies the Autodesk assemblies at runtime.
 
 ## Core
 
@@ -31,12 +28,37 @@ dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net8.0-windows
 dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net10.0-windows
 ```
 
-The host build intentionally fails with an explicit error if the corresponding Autodesk SDK directory is not configured.
+These host builds are suitable for source/API compatibility evidence in CI; they do not replace testing inside AutoCAD.
 
-## Package
+## Package and Setup.exe
 
 ```powershell
 ./scripts/package.ps1 -Version 0.1.0
 ```
 
-The generated zip is written under `artifacts/` and contains `QS3D.bundle` with separate 2025–2026 and 2027 payloads.
+The packaging script builds both host generations, stages `QS3D.bundle`, and writes:
+
+```text
+artifacts/QS3D-AutoCAD-0.1.0.zip
+artifacts/QS3D-AutoCAD-0.1.0-Setup.exe
+```
+
+The setup executable is a self-contained Windows x64 application with the bundle embedded inside it. Run it elevated to install or upgrade QS3D for all users. To remove the plugin:
+
+```powershell
+./QS3D-AutoCAD-0.1.0-Setup.exe --uninstall
+```
+
+The PowerShell install/uninstall scripts under `installer/` remain available for development and troubleshooting.
+
+## Native acceptance
+
+A successful source CI run is not a native AutoCAD qualification. For AutoCAD 2025, 2026 and 2027, test a bundle built from the exact commit and verify:
+
+1. AutoCAD discovers the bundle without manual `NETLOAD`.
+2. `QS3D` command-invocation autoload opens the palette.
+3. Every modelling command creates expected geometry and participates in AutoCAD undo/redo.
+4. `QS3DBOQ` sees only QS3D-tagged geometry and reports correct quantities.
+5. Save, close and reopen the DWG; project state and XData must persist.
+6. Restart AutoCAD and repeat command invocation to verify autoload behavior.
+7. Install, upgrade and `--uninstall` the generated Setup.exe.

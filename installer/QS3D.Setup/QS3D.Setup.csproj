@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>QS3D-AutoCAD-Setup</AssemblyName>
+    <RootNamespace>QS3D.Setup</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(BundleZipPath)' != '' and Exists('$(BundleZipPath)')">
+    <EmbeddedResource Include="$(BundleZipPath)" LogicalName="QS3D.BundleZip" />
+  </ItemGroup>
+
+  <Target Name="ValidateEmbeddedBundle" BeforeTargets="CoreCompile">
+    <Error Condition="'$(BundleZipPath)' == ''" Text="BundleZipPath is required. Build the AutoCAD bundle before publishing QS3D Setup." />
+    <Error Condition="'$(BundleZipPath)' != '' and !Exists('$(BundleZipPath)')" Text="Bundle zip not found: $(BundleZipPath)" />
+  </Target>
+</Project>
