@@ -1,36 +1,30 @@
 # Work claim — live JIG dimensions and orientation
 
-- Status: `ACTIVE`
+- Status: `COMPLETED`
 - Agent: `chatgpt56sol`
 - Registered: `2026-08-14T22:14:00+07:00`
 - Baseline main SHA: `fab0c517e2a09ec79ed7553d9df7dbdeee373ded`
 - Implementation branch: `agent/chatgpt56sol/jig-live-dimensions-20260814`
 - Integration batch: `integration/jig-live-dimensions-20260814`
+- Integrated main SHA: `0fd1196e90c56607f5a8362ed8c1310aefc965bf`
+- Exact-main CI: run `31814631021` / CI #95 — `SUCCESS`
 
 ## Reserved scope
 Complete the remaining source-safe issue #5 JIG UX gap: live transient dimension/orientation annotation during Column/Beam/Slab/Wall/Curtain cursor movement, with no database persistence and mandatory native visual/cancel evidence.
 
-## Expected surfaces
-- `src/QS3D.AutoCAD/UI/Qs3dPointPreviewJig.cs`
-- `src/QS3D.AutoCAD/Commands/Qs3dJigCommands.cs`
-- architecture/native acceptance guards and `docs/JIG-PREVIEW.md`
+## Integrated outcome
+- Added transient per-frame `DBText` annotation to `Qs3dPointPreviewJig`; text is drawn with `WorldDraw` and disposed without transaction, append, XData or project/browser persistence.
+- Column shows W/D/H and axis orientation; Beam/Wall show live length, section dimension, height and cursor-derived plan angle; Slab shows X/Y/thickness/area; Curtain shows live baseline length, recomputed panel width, thickness, height and plan angle.
+- Existing solid/panel preview and `PromptStatus.OK` persistence boundary remain unchanged.
+- Architecture guard requires the annotation path and retains the transient-helper persistence/lifetime prohibitions.
+- Added mandatory native gate `jig_live_dimensions_orientation` and expanded `docs/JIG-PREVIEW.md` with quadrant/module-threshold/cancel/no-persistent-text checks.
+- Exact integration CI #94 passed every repository gate on `1f81e1aadfa94be2ae07e80aa4f05e2417fe04dd`.
+- Final integration PR #24 landed on main at `0fd1196e90c56607f5a8362ed8c1310aefc965bf`; exact-main push CI #95 passed every repository gate.
 
-## Invariants
-- Dimension/orientation graphics are transient only; no transaction, append, XData or project/browser record during sampling.
-- Existing solid preview and PromptStatus.OK commit boundary remain unchanged.
-- Annotation text must reflect current cursor-derived dimensions/orientation rather than stale final metadata.
-- Native AutoCAD 2025/2026/2027 visual behavior remains evidence-only; hosted CI cannot claim PASS.
-
-## Excluded scope
-- Native AutoCAD qualification itself
+## Excluded / remaining native-only scope
+- Licensed AutoCAD 2025/2026/2027 visual PASS for live dimensions/orientation, solid preview and cancel safety
+- Native qualification and other required runtime gates
 - Level/Grid manager source lane already completed
 - commercial signing/licensing/updater/telemetry services
 
-## Validation plan
-- both AutoCAD host families compile
-- architecture guard requires transient annotation path and forbids persistence in the JIG helper
-- native contract adds an explicit live-dimensions/orientation gate
-- exact integration and final-main CI remain green
-
-## Completion condition
-The source lane is integrated through agent -> integration -> main, exact final-main CI is green, the claim is terminal, and licensed-host visual evidence remains explicitly pending.
+The source lane is complete. Native visual behavior remains evidence-only and hosted CI is not treated as native PASS.
