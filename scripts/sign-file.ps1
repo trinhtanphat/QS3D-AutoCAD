@@ -83,16 +83,17 @@ try {
     }
 
     if ($SkipTrustVerification) {
-        Write-Host 'Verifying signer identity without trust-chain enforcement (smoke mode only)...'
-        $signature = Get-AuthenticodeSignature -LiteralPath $FilePath
-        if ($null -eq $signature.SignerCertificate) {
-            throw "Authenticode smoke verification did not find a signer certificate for $FilePath."
+        Write-Host 'Checking embedded signer identity without trust-chain/network validation (smoke mode only)...'
+        $rawSigner = [System.Security.Cryptography.X509Certificates.X509Certificate]::CreateFromSignedFile($FilePath)
+        $signedCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($rawSigner)
+        try {
+            if ($signedCertificate.Thumbprint -ne $certificate.Thumbprint) {
+                throw "Authenticode smoke signer mismatch for $FilePath."
+            }
         }
-        if ($signature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint) {
-            throw "Authenticode smoke signer mismatch for $FilePath."
-        }
-        if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned) {
-            throw "Authenticode smoke verification reports the file is not signed: $FilePath."
+        finally {
+            $signedCertificate.Dispose()
+            $rawSigner.Dispose()
         }
     }
     else {
