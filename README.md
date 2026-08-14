@@ -43,15 +43,22 @@ Grid bindings currently express project semantics and dependency safety; they do
 
 ## Build and delivery
 
-GitHub `CI` builds and smoke-tests the host-neutral Core, compiles both AutoCAD host generations using Autodesk-owned packages, validates command/bundle architecture, and compiles the self-contained Setup.exe. Autodesk assemblies are compile-time dependencies only and are excluded from QS3D release payloads.
+GitHub `CI` builds and smoke-tests the host-neutral Core, compiles both AutoCAD host generations using Autodesk-owned packages, validates command/bundle architecture, packages an engineering release candidate, and verifies release provenance/checksums end to end. Autodesk assemblies are compile-time dependencies only and are excluded from QS3D release payloads.
 
 `./scripts/package.ps1 -Version <version>` creates:
 
 - `artifacts/QS3D-AutoCAD-<version>.zip`
 - `artifacts/QS3D-AutoCAD-<version>-Setup.exe`
+- `artifacts/RELEASE-PROVENANCE.json`
 - `artifacts/SHA256SUMS.txt`
 
-The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory; `--uninstall` removes it. Tag builds use the release workflow to publish prerelease assets once native acceptance is complete.
+`RELEASE-PROVENANCE.json` records the exact source commit, version, runtime matrix, signing state, artifact sizes and SHA-256 hashes. `./scripts/verify-artifacts.ps1 -Version <version>` independently checks that contract.
+
+The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory. Install/upgrade is staged and rollback-safe; Setup refuses install, upgrade or `--uninstall` while AutoCAD is running.
+
+Tag publication is fail-closed: the tagged SHA must be on `main`, must exactly equal repository variable `QS3D_NATIVE_ACCEPTED_SHA`, and real Authenticode PFX/password secrets must be configured. The workflow signs the plugin assemblies and Setup.exe, verifies those signatures/provenance, and only then creates a GitHub prerelease. Manual packaging remains suitable for engineering validation but must not be represented as a signed production release when provenance reports `signed=false`.
+
+The current plugin sends no telemetry or production licensing calls. See `docs/PRIVACY.md` for the current privacy posture and `docs/RELEASE-SECURITY.md` for release/signing gates.
 
 A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, editing, Level/Grid dependency operations, undo/redo, save/reopen persistence and installer behavior.
 
