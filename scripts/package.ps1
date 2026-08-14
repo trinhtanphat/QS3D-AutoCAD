@@ -7,14 +7,19 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repo 'src\QS3D.AutoCAD\QS3D.AutoCAD.csproj'
+$setupProject = Join-Path $repo 'installer\QS3D.Setup\QS3D.Setup.csproj'
 $bundleSource = Join-Path $repo 'bundle\QS3D.bundle'
-$stage = Join-Path $repo 'artifacts\QS3D.bundle'
-$zip = Join-Path $repo "artifacts\QS3D-AutoCAD-$Version.zip"
+$artifacts = Join-Path $repo 'artifacts'
+$stage = Join-Path $artifacts 'QS3D.bundle'
+$zip = Join-Path $artifacts "QS3D-AutoCAD-$Version.zip"
+$setupOutput = Join-Path $artifacts 'setup-publish'
+$setupExe = Join-Path $artifacts "QS3D-AutoCAD-$Version-Setup.exe"
 
 if (-not $AutoCAD2026SdkDir) { throw 'AUTOCAD_2026_SDK_DIR is required.' }
 if (-not $AutoCAD2027SdkDir) { throw 'AUTOCAD_2027_SDK_DIR is required.' }
 
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force $setupOutput -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item -Recurse -Force (Join-Path $bundleSource '*') $stage
 
@@ -23,8 +28,8 @@ $manifest = Join-Path $stage 'PackageContents.xml'
 $xml.ApplicationPackage.AppVersion = $Version
 $xml.Save($manifest)
 
-dotnet build $project -c Release -f net8.0-windows -p:AutoCADSdkDir="$AutoCAD2026SdkDir"
-dotnet build $project -c Release -f net10.0-windows -p:AutoCADSdkDir="$AutoCAD2027SdkDir"
+dotnet build $project -c Release -f net8.0-windows "-p:AutoCADSdkDir=$AutoCAD2026SdkDir"
+dotnet build $project -c Release -f net10.0-windows "-p:AutoCADSdkDir=$AutoCAD2027SdkDir"
 
 $payloads = @(
     @{ Framework = 'net8.0-windows'; Folder = '2025-2026' },
@@ -40,4 +45,16 @@ foreach ($payload in $payloads) {
 
 Remove-Item -Force $zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+
+dotnet publish $setupProject -c Release -r win-x64 --self-contained true `
+    -p:PublishSingleFile=true `
+    "-p:BundleZipPath=$zip" `
+    "-p:Version=$Version" `
+    -o $setupOutput
+
+$publishedSetup = Join-Path $setupOutput 'QS3D-AutoCAD-Setup.exe'
+if (-not (Test-Path $publishedSetup)) { throw "Setup executable was not produced at $publishedSetup" }
+Copy-Item -Force $publishedSetup $setupExe
+
 Write-Host "Created $zip"
+Write-Host "Created $setupExe"
