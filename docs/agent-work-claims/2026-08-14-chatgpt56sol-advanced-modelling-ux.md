@@ -1,39 +1,32 @@
 # Work claim — advanced modelling UX source completion
 
-- Status: `ACTIVE`
+- Status: `COMPLETED`
 - Agent: `chatgpt56sol`
 - Registered: `2026-08-14T21:09:00+07:00`
 - Baseline main SHA: `e1a517cc3bcb22a49c42418e8843115c959e71d2`
 - Implementation branch: `agent/chatgpt56sol/advanced-modelling-ux-20260814`
 - Integration batch: `integration/advanced-modelling-ux-20260814`
+- Integrated main SHA: `1c07c82d7f34181ad075a31a43af84147d7601c6`
+- Exact-main CI: run `31810061293` / CI #82 — `SUCCESS`
 
 ## Reserved scope
 Complete the remaining source-safe portion of issue #5 without claiming native AutoCAD runtime PASS: live DrawJig/EntityJig-style previews for Column/Beam/Slab/Wall/Curtain with cancel-safe persistence boundaries; Grid snapping/reshape semantics tied to existing Grid references; corresponding host-side UI/bundle/architecture/native-acceptance guards and deterministic Core regressions where host-neutral semantics are involved.
 
-## Expected surfaces
-- `src/QS3D.AutoCAD/Commands/*` advanced modelling / placement commands
-- `src/QS3D.AutoCAD/UI/*` palette/Ribbon/jig helpers
-- `src/QS3D.AutoCAD/Infrastructure/*` geometry helpers only as needed
-- `src/QS3D.Core/*` Grid placement semantics only when host-neutral
-- `tests/QS3D.Core.SmokeTests/*` deterministic placement regressions
-- `bundle/QS3D.bundle/PackageContents.xml`
-- `scripts/validate-architecture.ps1`
-- `native-acceptance/*` and native acceptance documentation for new runtime-only gates
+## Integrated outcome
+- Added transient live 3D JIG authoring for Column, Beam, Slab, Wall and Curtain.
+- Kept preview helpers database-free; persistent entity/metadata creation occurs only after `PromptStatus.OK`.
+- Added deterministic one-Grid translate, two-Grid projection and Column Grid-intersection semantics in Core, including parallel-Grid rejection.
+- Added explicit `QS3DGRIDSNAP` that rebuilds replacement geometry, attaches updated metadata, erases the old entity and commits together.
+- Exposed the new workflows through Palette, runtime Ribbon and both bundle runtime entries.
+- Added architecture regression guards, Core smoke regressions, native evidence requirements and `docs/JIG-PREVIEW.md`.
+- Fixed the exact CI #80 Autodesk host compile blocker through recovery PR #15; exact integration CI #81 and exact-main push CI #82 both passed all repository gates.
 
-## Excluded scope
+## Excluded / remaining native-only scope
 - Production signing certificate/PFX procurement
 - Licensing backend and activation service
 - Updater/network service implementation
 - Telemetry transport/consent backend
-- Claiming AutoCAD 2025/2026/2027 native PASS without real licensed-host evidence
+- AutoCAD 2025/2026/2027 native PASS for `jig_live_solid_preview`, `jig_cancel_safety`, `grid_geometry_snap`, Ribbon/runtime behavior and other native checks
 - Unrelated release, installer, BOQ or metadata schema redesign
 
-## Validation plan
-- Exact-HEAD Core build and smoke tests on .NET 8/.NET 10
-- Exact-HEAD AutoCAD 2025–2026 and 2027 host compilation
-- Architecture/bundle/native-acceptance guards
-- Package/provenance and signing-plumbing CI gates already required by the repository
-- Native runtime behavior remains pending until licensed AutoCAD evidence is recorded
-
-## Completion condition
-Source-safe issue #5 implementation is integrated through the branch/integration workflow, current exact `main` CI is green, the claim is marked `COMPLETED`, and remaining native-only evidence is explicitly documented rather than inferred from hosted CI.
+The source lane is complete. Native runtime gates remain pending until real licensed AutoCAD evidence is recorded; hosted CI is not evidence for those gates.
