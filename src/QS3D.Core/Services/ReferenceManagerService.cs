@@ -15,7 +15,11 @@ public static class ReferenceManagerService
             .ThenBy(element => element.Id)
             .ToArray();
 
-        return descending ? levels.Reverse().ToArray() : levels;
+        if (descending)
+        {
+            Array.Reverse(levels);
+        }
+        return levels;
     }
 
     public static IReadOnlyList<StructuralElement> SelectParallelGridFamily(
