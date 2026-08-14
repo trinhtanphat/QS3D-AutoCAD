@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)][string]$FilePath,
     [Parameter(Mandatory = $true)][string]$PfxPath,
     [Parameter(Mandatory = $true)][string]$Password,
-    [string]$TimestampUrl = 'http://timestamp.digicert.com'
+    [string]$TimestampUrl = 'http://timestamp.digicert.com',
+    [switch]$SkipTimestamp
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,8 +17,8 @@ if (-not (Test-Path -LiteralPath $PfxPath -PathType Leaf)) {
 if ([string]::IsNullOrWhiteSpace($Password)) {
     throw 'Signing certificate password is required.'
 }
-if ([string]::IsNullOrWhiteSpace($TimestampUrl)) {
-    throw 'RFC3161 timestamp URL is required.'
+if (-not $SkipTimestamp -and [string]::IsNullOrWhiteSpace($TimestampUrl)) {
+    throw 'RFC3161 timestamp URL is required for production signing.'
 }
 
 $kitsRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'
@@ -30,14 +31,41 @@ if ($null -eq $signTool) {
     throw "signtool.exe (x64) was not found under $kitsRoot. Install the Windows SDK signing tools."
 }
 
-& $signTool.FullName sign /fd SHA256 /td SHA256 /tr $TimestampUrl /f $PfxPath /p $Password $FilePath
-if ($LASTEXITCODE -ne 0) {
-    throw "signtool failed for $FilePath with exit code $LASTEXITCODE."
+$securePassword = ConvertTo-SecureString -String $Password -AsPlainText -Force
+$imported = @(Import-PfxCertificate -FilePath $PfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $securePassword -Exportable:$false)
+$certificate = $imported |
+    Where-Object { $_.HasPrivateKey } |
+    Sort-Object NotAfter -Descending |
+    Select-Object -First 1
+
+if ($null -eq $certificate) {
+    foreach ($item in $imported) {
+        Remove-Item -LiteralPath "Cert:\CurrentUser\My\$($item.Thumbprint)" -Force -ErrorAction SilentlyContinue
+    }
+    throw 'The PFX did not import a certificate with a private key.'
 }
 
-& $signTool.FullName verify /pa /all /v $FilePath
-if ($LASTEXITCODE -ne 0) {
-    throw "Authenticode verification failed for $FilePath with exit code $LASTEXITCODE."
+try {
+    $signArguments = @('sign', '/fd', 'SHA256', '/sha1', $certificate.Thumbprint, '/s', 'My')
+    if (-not $SkipTimestamp) {
+        $signArguments += @('/td', 'SHA256', '/tr', $TimestampUrl)
+    }
+    $signArguments += $FilePath
+
+    & $signTool.FullName @signArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "signtool failed for $FilePath with exit code $LASTEXITCODE."
+    }
+
+    & $signTool.FullName verify /pa /all /v $FilePath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Authenticode verification failed for $FilePath with exit code $LASTEXITCODE."
+    }
+}
+finally {
+    foreach ($item in $imported) {
+        Remove-Item -LiteralPath "Cert:\CurrentUser\My\$($item.Thumbprint)" -Force -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host "Signed and verified $FilePath"
