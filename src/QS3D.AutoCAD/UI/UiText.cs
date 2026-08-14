@@ -35,6 +35,7 @@ internal static class UiText
         ["assignLevel"] = "Gán vào cao độ",
         ["moveLevel"] = "Đổi cao độ + cập nhật phụ thuộc",
         ["bindGrid"] = "Gán tham chiếu trục",
+        ["clearRefs"] = "Gỡ tham chiếu cao độ/trục",
         ["gridArray"] = "Tạo dãy trục theo khoảng cách",
         ["referenceDelete"] = "Xóa cao độ/trục an toàn",
         ["referenceList"] = "Liệt kê phụ thuộc"
@@ -67,6 +68,7 @@ internal static class UiText
         ["assignLevel"] = "Assign to Level",
         ["moveLevel"] = "Move Level + dependents",
         ["bindGrid"] = "Bind Grid references",
+        ["clearRefs"] = "Clear Level/Grid references",
         ["gridArray"] = "Create spaced Grid array",
         ["referenceDelete"] = "Delete Level/Grid safely",
         ["referenceList"] = "List dependencies"
