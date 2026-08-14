@@ -53,7 +53,7 @@ internal static class AutoCadDrawing
         var xAxis = direction.GetNormal();
         var zAxis = Vector3d.ZAxis;
         var yAxis = zAxis.CrossProduct(xAxis).GetNormal();
-        var targetOrigin = start - (yAxis * (width / 2.0));
+        var targetOrigin = start.Subtract(yAxis.MultiplyBy(width / 2.0));
 
         var solid = new Solid3d();
         solid.CreateBox(direction.Length, width, height);
