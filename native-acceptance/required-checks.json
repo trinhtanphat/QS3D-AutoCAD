@@ -4,6 +4,7 @@
     { "id": "installer_exact_candidate", "description": "Install the exact candidate with generated Setup.exe; no manual NETLOAD or substituted DLLs." },
     { "id": "bundle_command_autoload", "description": "AutoCAD discovers QS3D.bundle and the QS3D command lazy-loads the plugin." },
     { "id": "palette_startup", "description": "QS3D dockable workspace opens without startup/NETLOAD failure." },
+    { "id": "runtime_identity", "description": "Record the CLR version observed inside the loaded QS3D plugin and verify it matches the expected host runtime family." },
     { "id": "level_workflow", "description": "Create/edit Level and verify linked annotation and metadata." },
     { "id": "grid_workflow", "description": "Create/edit Grid, Grid array and dependency/reference operations." },
     { "id": "column_workflow", "description": "Create/edit Column geometry and metadata." },
