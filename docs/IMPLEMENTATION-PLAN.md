@@ -6,7 +6,7 @@ QS3D AutoCAD is a native in-process AutoCAD Managed .NET plugin. The distributab
 
 The codebase is split into two boundaries:
 
-1. `QS3D.Core` — host-neutral geometry, structural element semantics, quantities and project rules. It must not reference Autodesk namespaces.
+1. `QS3D.Core` — host-neutral geometry, structural element semantics, quantities, placement references and project rules. It must not reference Autodesk namespaces.
 2. `QS3D.AutoCAD` — Autodesk document/database transactions, commands, entity creation, DWG persistence and UI.
 
 This repository starts with a local Core so the AutoCAD product can move independently. Once cross-host contracts stabilize, Core should be promoted to a shared versioned package used by AutoCAD and BricsCAD rather than copied between hosts.
@@ -56,11 +56,29 @@ Autodesk runtime assemblies are compile-time dependencies only and are excluded 
 - browser auto-refresh after QS3D commands
 - Vietnamese/English palette controls
 
+### Implemented source-side — P1.5 Level/Grid dependency manager
+
+- host-neutral `LevelId`, `StartGridId` and `EndGridId` placement references
+- backward-compatible `QS3D2` entity metadata while retaining reads for legacy `QS3D1` entities
+- linked Level/Grid/Section annotation identity rather than relying only on layer/position matching
+- Level assignment that moves/rebuilds physical geometry to the referenced elevation
+- Level elevation changes that propagate to Level-bound structural geometry and metadata
+- semantic one/two-Grid binding with dependency tracking
+- explicit clear-reference workflow so users can unbind before deleting references
+- dependency-safe Level/Grid deletion
+- fixed-spacing parallel Grid-array creation
+- reference/dependent listing and placement IDs in the property inspector
+- localized Levels & Grids palette tab
+- Core placement regression coverage and command/bundle guards
+
+Grid references in this slice are semantic references. They intentionally do not auto-snap or reshape element XY geometry until native interactive Grid-placement behavior has been designed and qualified.
+
 ### Native/UI work still requiring AutoCAD runtime qualification
 
 - Ribbon integration. Autodesk's Ribbon/application-menu customization surface requires `AdWindows.dll`, so this should be compiled and qualified against the installed AutoCAD/ObjectARX UI runtime instead of weakening the hosted compile gate.
 - full 3D entity jig/live-solid previews beyond AutoCAD's built-in rubber-band point prompts
-- richer Level/Grid manager operations (bulk rename/reorder/delete and model-wide placement rules)
+- native interactive Grid snapping/reshaping from Grid bindings
+- additional bulk Level/Grid operations such as multi-select rename/resequence and visual drag/reorder where they add model semantics
 - native visual QA for high-DPI/dark/light AutoCAD themes
 
 ### Commercial layer requiring production credentials/infrastructure
@@ -76,6 +94,6 @@ These items are intentionally not represented as complete by source-only placeho
 
 A green source CI run proves that Core, both Autodesk API compile targets, bundle metadata and Setup.exe compile successfully. It does **not** prove AutoCAD runtime behavior.
 
-Native acceptance must use a real licensed AutoCAD installation for every supported host generation and verify discovery/autoload, all commands, browser selection sync, property editing, undo/redo, save/reopen persistence, BOQ semantics, restart behavior, install/upgrade/uninstall and exact-build provenance.
+Native acceptance must use a real licensed AutoCAD installation for every supported host generation and verify discovery/autoload, all commands, browser selection sync, property editing, Level/Grid assign/move/bind/clear/delete operations, undo/redo, save/reopen persistence, BOQ semantics, restart behavior, install/upgrade/uninstall and exact-build provenance.
 
 CI and runtime gates must never be weakened merely to obtain a green result.

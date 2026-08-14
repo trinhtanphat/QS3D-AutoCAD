@@ -5,7 +5,6 @@ using Autodesk.AutoCAD.Runtime;
 using QS3D.AutoCAD.Infrastructure;
 using QS3D.AutoCAD.Metadata;
 using QS3D.AutoCAD.UI;
-using QS3D.Core.Geometry;
 using QS3D.Core.Model;
 
 [assembly: CommandClass(typeof(QS3D.AutoCAD.Commands.Qs3dEditCommands))]
@@ -59,9 +58,9 @@ public sealed class Qs3dEditCommands
         }
 
         ObjectId resultingId;
-        if (NeedsSolidRebuild(updatedMetadata.Kind))
+        if (Qs3dGeometryFactory.IsSolid(updatedMetadata.Kind))
         {
-            var replacement = CreateReplacementSolid(updatedMetadata);
+            var replacement = Qs3dGeometryFactory.CreateSolid(updatedMetadata);
             resultingId = AutoCadDrawing.Append(transaction, document.Database, replacement, originalEntity.LayerId);
             updatedMetadata.Attach(transaction, document.Database, replacement);
             originalEntity.Erase();
@@ -69,7 +68,7 @@ public sealed class Qs3dEditCommands
         else
         {
             updatedMetadata.Attach(transaction, document.Database, originalEntity);
-            UpdateMarkerAnnotation(transaction, document.Database, originalEntity.LayerId, updatedMetadata);
+            UpdateMarkerAnnotation(transaction, document.Database, originalEntity.LayerId, originalMetadata, updatedMetadata);
             resultingId = originalEntity.ObjectId;
         }
 
@@ -134,60 +133,37 @@ public sealed class Qs3dEditCommands
         }
     }
 
-    private static bool NeedsSolidRebuild(ElementKind kind) => kind is
-        ElementKind.Column or ElementKind.Beam or ElementKind.Slab or ElementKind.Wall or ElementKind.Curtain;
-
-    private static Solid3d CreateReplacementSolid(Qs3dEntityMetadata metadata)
-    {
-        var start = ToAcad(metadata.Start);
-        var end = ToAcad(metadata.End);
-        return metadata.Kind switch
-        {
-            ElementKind.Column => AutoCadDrawing.CreateAxisAlignedBox(start, metadata.Width, metadata.Depth, metadata.Height),
-            ElementKind.Beam => AutoCadDrawing.CreatePlanOrientedBox(start, end, metadata.Width, metadata.Height),
-            ElementKind.Wall or ElementKind.Curtain => AutoCadDrawing.CreatePlanOrientedBox(start, end, metadata.Thickness, metadata.Height),
-            ElementKind.Slab => CreateSlab(metadata),
-            _ => throw new InvalidOperationException($"Cannot rebuild {metadata.Kind} as a solid.")
-        };
-    }
-
-    private static Solid3d CreateSlab(Qs3dEntityMetadata metadata)
-    {
-        var min = new Point3d(
-            Math.Min(metadata.Start.X, metadata.End.X),
-            Math.Min(metadata.Start.Y, metadata.End.Y),
-            Math.Min(metadata.Start.Z, metadata.End.Z));
-        var x = Math.Abs(metadata.End.X - metadata.Start.X);
-        var y = Math.Abs(metadata.End.Y - metadata.Start.Y);
-        if (x <= Tolerance.Global.EqualPoint || y <= Tolerance.Global.EqualPoint)
-        {
-            throw new InvalidOperationException("Stored slab geometry has a zero plan dimension.");
-        }
-
-        return AutoCadDrawing.CreateAxisAlignedBox(min, x, y, metadata.Thickness);
-    }
-
     private static void UpdateMarkerAnnotation(
         Transaction transaction,
         Database database,
         ObjectId layerId,
-        Qs3dEntityMetadata metadata)
+        Qs3dEntityMetadata originalMetadata,
+        Qs3dEntityMetadata updatedMetadata)
     {
         var space = (BlockTableRecord)transaction.GetObject(database.CurrentSpaceId, OpenMode.ForRead);
-        var anchor = ToAcad(metadata.Start);
+        var originalAnchor = ToAcad(originalMetadata.Start);
         foreach (ObjectId id in space)
         {
-            if (transaction.GetObject(id, OpenMode.ForRead, false) is not DBText text ||
-                text.LayerId != layerId ||
-                text.Position.DistanceTo(anchor) > 1e-6)
+            if (transaction.GetObject(id, OpenMode.ForRead, false) is not DBText text)
+            {
+                continue;
+            }
+
+            var linked = Qs3dVisualLink.TryReadParentId(text, out var parentId) && parentId == updatedMetadata.Id;
+            var legacyMatch = !linked && text.LayerId == layerId && text.Position.DistanceTo(originalAnchor) <= 1e-6;
+            if (!linked && !legacyMatch)
             {
                 continue;
             }
 
             text.UpgradeOpen();
-            text.TextString = metadata.Kind == ElementKind.Level
-                ? $"{metadata.Name}  EL={metadata.Start.Z:0.###}"
-                : metadata.Name;
+            text.TextString = updatedMetadata.Kind == ElementKind.Level
+                ? $"{updatedMetadata.Name}  EL={updatedMetadata.Start.Z:0.###}"
+                : updatedMetadata.Name;
+            if (!linked)
+            {
+                Qs3dVisualLink.Attach(transaction, database, text, updatedMetadata.Id);
+            }
             return;
         }
     }
@@ -218,5 +194,5 @@ public sealed class Qs3dEditCommands
             : fallback;
     }
 
-    private static Point3d ToAcad(Point3 point) => new(point.X, point.Y, point.Z);
+    private static Point3d ToAcad(QS3D.Core.Geometry.Point3 point) => new(point.X, point.Y, point.Z);
 }

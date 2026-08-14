@@ -25,12 +25,21 @@ Run `QS3D` to lazy-load the plugin and open the dockable QS3D workspace. The cur
 - `QS3DSECTION` — section marker
 - `QS3DBOQ` — quantity summary from QS3D-tagged entities
 - `QS3DEDIT` — edit QS3D properties while rebuilding physical solids when dimensions change
+- `QS3DASSIGNLEVEL` — bind a structural element to a QS3D Level and move/rebuild it to that elevation
+- `QS3DLEVELMOVE` — change a Level elevation and propagate the Z shift to all Level-bound structural elements
+- `QS3DBINDGRID` — attach one or two semantic Grid references to a structural element
+- `QS3DCLEARREFS` — remove Level/Grid placement references without moving geometry
+- `QS3DGRIDARRAY` — create a parallel named Grid series with fixed spacing
+- `QS3DREFERENCEDELETE` — delete an unused Level/Grid while refusing deletion when dependents remain
+- `QS3DREFERENCES` — list Level/Grid references and dependent counts
 - `QS3DREFRESH` — refresh the model browser
 - `QS3DABOUT` — host/runtime information
 
-The dockable workspace has a Tools tab plus a Project tab. The project browser lists QS3D-owned entities, synchronizes with AutoCAD pickfirst selection, exposes geometry and quantity properties, and can launch safe editing. Palette controls can switch between Vietnamese and English.
+The dockable workspace has Tools, Project and Levels & Grids tabs. The project browser lists QS3D-owned entities, synchronizes with AutoCAD pickfirst selection, exposes geometry, quantity and placement-reference properties, and can launch safe editing. Palette controls can switch between Vietnamese and English.
 
-Generated geometry carries typed QS3D XData. Project identity/name is stored in the DWG Named Objects Dictionary, so QS3D state travels with the drawing. Solid property edits preserve QS3D semantic IDs while replacing geometry, preventing BOQ metadata from diverging from the visible model.
+Generated geometry carries typed QS3D XData. Project identity/name is stored in the DWG Named Objects Dictionary, so QS3D state travels with the drawing. Current metadata uses the backward-compatible `QS3D2` schema for Level/Grid references while continuing to read legacy `QS3D1` entities. Solid property or Level-placement changes preserve QS3D semantic IDs while replacing or moving physical geometry, preventing BOQ metadata from diverging from the visible model.
+
+Grid bindings currently express project semantics and dependency safety; they do not automatically snap or reshape bound geometry. Native interactive Grid snapping and full live-solid EntityJig authoring remain runtime-qualified follow-up work.
 
 ## Build and delivery
 
@@ -44,6 +53,6 @@ GitHub `CI` builds and smoke-tests the host-neutral Core, compiles both AutoCAD 
 
 The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory; `--uninstall` removes it. Tag builds use the release workflow to publish prerelease assets once native acceptance is complete.
 
-A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, editing, undo/redo, save/reopen persistence and installer behavior.
+A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD 2025, 2026 and 2027 for autoload, modelling, editing, Level/Grid dependency operations, undo/redo, save/reopen persistence and installer behavior.
 
 See `docs/IMPLEMENTATION-PLAN.md` and `docs/BUILD.md` for architecture, build and native acceptance gates.

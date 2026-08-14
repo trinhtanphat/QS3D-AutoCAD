@@ -12,6 +12,7 @@ internal static class UiText
     {
         ["tools"] = "Công cụ",
         ["project"] = "Dự án",
+        ["referencesTab"] = "Cao độ & Trục",
         ["init"] = "Khởi tạo dự án",
         ["level"] = "Cao độ",
         ["grid"] = "Trục",
@@ -30,13 +31,21 @@ internal static class UiText
         ["kind"] = "Loại",
         ["name"] = "Tên",
         ["handle"] = "Handle",
-        ["elements"] = "Đối tượng QS3D"
+        ["elements"] = "Đối tượng QS3D",
+        ["assignLevel"] = "Gán vào cao độ",
+        ["moveLevel"] = "Đổi cao độ + cập nhật phụ thuộc",
+        ["bindGrid"] = "Gán tham chiếu trục",
+        ["clearRefs"] = "Gỡ tham chiếu cao độ/trục",
+        ["gridArray"] = "Tạo dãy trục theo khoảng cách",
+        ["referenceDelete"] = "Xóa cao độ/trục an toàn",
+        ["referenceList"] = "Liệt kê phụ thuộc"
     };
 
     private static readonly IReadOnlyDictionary<string, string> English = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["tools"] = "Tools",
         ["project"] = "Project",
+        ["referencesTab"] = "Levels & Grids",
         ["init"] = "Initialize Project",
         ["level"] = "Level",
         ["grid"] = "Grid",
@@ -55,7 +64,14 @@ internal static class UiText
         ["kind"] = "Kind",
         ["name"] = "Name",
         ["handle"] = "Handle",
-        ["elements"] = "QS3D elements"
+        ["elements"] = "QS3D elements",
+        ["assignLevel"] = "Assign to Level",
+        ["moveLevel"] = "Move Level + dependents",
+        ["bindGrid"] = "Bind Grid references",
+        ["clearRefs"] = "Clear Level/Grid references",
+        ["gridArray"] = "Create spaced Grid array",
+        ["referenceDelete"] = "Delete Level/Grid safely",
+        ["referenceList"] = "List dependencies"
     };
 
     public static event EventHandler? LanguageChanged;

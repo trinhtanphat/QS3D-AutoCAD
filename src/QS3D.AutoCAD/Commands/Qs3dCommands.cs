@@ -55,6 +55,7 @@ public sealed class Qs3dCommands
         var name = PromptName(editor, "Level name", $"LEVEL-{elevation.Value:0.###}");
         if (name is null) return;
         var point = new Point3d(pointResult.Value.X, pointResult.Value.Y, elevation.Value);
+        var semanticId = Guid.NewGuid();
 
         using var transaction = database.TransactionManager.StartTransaction();
         var layer = AutoCadDrawing.EnsureLayer(transaction, database, "QS3D-LEVEL", 2);
@@ -62,7 +63,8 @@ public sealed class Qs3dCommands
         AutoCadDrawing.Append(transaction, database, marker, layer);
         var text = new DBText { Position = point, Height = 250, TextString = $"{name}  EL={elevation.Value:0.###}" };
         AutoCadDrawing.Append(transaction, database, text, layer);
-        new Qs3dEntityMetadata(Guid.NewGuid(), ElementKind.Level, name, ToCore(point), ToCore(point), 0, 0, 0, 0).Attach(transaction, database, marker);
+        new Qs3dEntityMetadata(semanticId, ElementKind.Level, name, ToCore(point), ToCore(point), 0, 0, 0, 0).Attach(transaction, database, marker);
+        Qs3dVisualLink.Attach(transaction, database, text, semanticId);
         transaction.Commit();
     }
 
@@ -213,6 +215,7 @@ public sealed class Qs3dCommands
         var end = editor.GetPoint(new PromptPointOptions($"\n{label} end point: ") { BasePoint = start.Value, UseBasePoint = true }); if (end.Status != PromptStatus.OK) return;
         if (start.Value.DistanceTo(end.Value) <= Tolerance.Global.EqualPoint) return;
         var name = PromptName(editor, $"{label} name", label[..1].ToUpperInvariant()); if (name is null) return;
+        var semanticId = Guid.NewGuid();
 
         using var transaction = database.TransactionManager.StartTransaction();
         var layer = AutoCadDrawing.EnsureLayer(transaction, database, layerName, colorIndex);
@@ -220,7 +223,8 @@ public sealed class Qs3dCommands
         AutoCadDrawing.Append(transaction, database, line, layer);
         var text = new DBText { Position = start.Value, Height = 250, TextString = name };
         AutoCadDrawing.Append(transaction, database, text, layer);
-        new Qs3dEntityMetadata(Guid.NewGuid(), kind, name, ToCore(start.Value), ToCore(end.Value), 0, 0, 0, 0).Attach(transaction, database, line);
+        new Qs3dEntityMetadata(semanticId, kind, name, ToCore(start.Value), ToCore(end.Value), 0, 0, 0, 0).Attach(transaction, database, line);
+        Qs3dVisualLink.Attach(transaction, database, text, semanticId);
         transaction.Commit();
     }
 

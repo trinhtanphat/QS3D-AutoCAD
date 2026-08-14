@@ -12,7 +12,10 @@ public sealed record StructuralElement(
     double Depth,
     double Height,
     double Thickness,
-    int Count = 1)
+    int Count = 1,
+    Guid? LevelId = null,
+    Guid? StartGridId = null,
+    Guid? EndGridId = null)
 {
     public double PlanLength => Start.PlanDistanceTo(End);
 
