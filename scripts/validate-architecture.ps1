@@ -75,7 +75,18 @@ $jigSource = Get-Content -Raw -LiteralPath $jigSourcePath
 $jigCommands = Get-Content -Raw -LiteralPath $jigCommandsPath
 $gridSnapSource = Get-Content -Raw -LiteralPath $gridSnapPath
 $referenceManagerSource = Get-Content -Raw -LiteralPath $referenceManagerPath
-foreach ($requiredSnippet in @('DrawJig', 'editor.Drag(this)', 'JigPromptPointOptions', 'AcquirePoint', 'WorldDraw', 'entity.WorldDraw(draw)')) {
+foreach ($requiredSnippet in @(
+    'DrawJig',
+    'editor.Drag(this)',
+    'JigPromptPointOptions',
+    'AcquirePoint',
+    'WorldDraw',
+    'entity.WorldDraw(draw)',
+    'Qs3dPreviewAnnotation',
+    '_annotationFactory',
+    'new DBText',
+    'text.WorldDraw(draw)'
+)) {
     if (-not $jigSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Jig preview regression: missing '$requiredSnippet'."
     }
@@ -90,6 +101,15 @@ foreach ($command in @('QS3DCOLUMNJIG','QS3DBEAMJIG','QS3DSLABJIG','QS3DWALLJIG'
     if (-not $jigCommands.Contains($needle, [StringComparison]::Ordinal)) {
         throw "Jig command regression: missing $command."
     }
+}
+foreach ($requiredSnippet in @('annotationFactory: Annotation', 'PlanAngleDegrees', 'LiveTextHeight', 'Ang=', 'Panel=', 'A=')) {
+    if (-not $jigCommands.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
+        throw "Live JIG dimensions/orientation regression: missing '$requiredSnippet'."
+    }
+}
+$annotationBindingCount = ([regex]::Matches($jigCommands, [regex]::Escape('annotationFactory: Annotation'))).Count
+if ($annotationBindingCount -lt 4) {
+    throw "Live JIG annotation regression: expected four annotation bindings covering Column, Slab, Curtain and shared Beam/Wall; found $annotationBindingCount."
 }
 $dragCount = ([regex]::Matches($jigCommands, [regex]::Escape('var drag = jig.Drag(editor);'))).Count
 $okGateCount = ([regex]::Matches($jigCommands, [regex]::Escape('if (drag.Status != PromptStatus.OK) return;'))).Count
