@@ -74,7 +74,38 @@ Use `fail` for an observed defect and `blocked` when the environment cannot exec
 
 Required coverage includes installer exactness, bundle autoload, palette startup, runtime identity, all modelling/edit/BOQ flows, browser synchronization, Level/Grid dependency behavior, undo/redo, save/reopen persistence, restart behavior, upgrade/uninstall, artifact provenance, and the Ribbon/native visual gates defined by issue #4.
 
-`ribbon_surface` and `ribbon_visual_qa` remain mandatory. Until the installed AutoCAD/ObjectARX Ribbon implementation exists and is actually exercised, the final validator must refuse native acceptance.
+## Ribbon acceptance procedure
+
+The source uses a runtime bridge instead of a compile-time `AdWindows.dll` reference. Hosted CI can prove only that the bridge compiles without importing `Autodesk.Windows`; it cannot prove the installed AutoCAD UI assembly exposes the expected runtime types/properties.
+
+For **each** AutoCAD 2025, 2026 and 2027 session:
+
+1. Start AutoCAD fresh with the exact installed candidate and confirm the normal `QS3D` palette/workspace still opens.
+2. Run `QS3DRIBBON`.
+3. Confirm the command reports the QS3D Ribbon as ready/created; a message saying Ribbon is unavailable is a native failure for `ribbon_surface`, even though the palette remains usable.
+4. Confirm exactly one visible `QS3D` tab exists after running `QS3DRIBBON` repeatedly; no duplicate tabs/panels should be created.
+5. Confirm the tab exposes the intended **Model**, **References**, and **Review** command groups.
+6. Exercise representative buttons from every group and confirm they dispatch the intended QS3D command. At minimum test a modelling command, Level/Grid reference command, `QS3D`, `QS3DEDIT`, `QS3DBOQ`, and `QS3DABOUT`.
+7. Switch AutoCAD workspace/theme where applicable and confirm Ribbon reconciliation still works without breaking model commands.
+8. Test the supported high-DPI configuration(s) used for release qualification and check label visibility, clipping, button usability and docked QS3D workspace interaction.
+
+Record the result explicitly:
+
+```powershell
+./scripts/record-native-result.ps1 `
+  -EvidencePath artifacts/native-acceptance/AutoCAD-2025.json `
+  -CheckId ribbon_surface `
+  -Status pass `
+  -Notes 'QS3DRIBBON created one QS3D tab; Model/References/Review buttons dispatched expected commands with no duplicate tab after repeated reconciliation.'
+
+./scripts/record-native-result.ps1 `
+  -EvidencePath artifacts/native-acceptance/AutoCAD-2025.json `
+  -CheckId ribbon_visual_qa `
+  -Status pass `
+  -Notes 'Verified supported light/dark workspace and release DPI configuration; labels/buttons remained usable with no clipping observed.'
+```
+
+`ribbon_surface` and `ribbon_visual_qa` remain mandatory. A source compile, reflection type strings, or a successful palette launch is **not** Ribbon native acceptance.
 
 ## Final validation
 
