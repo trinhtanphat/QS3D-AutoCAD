@@ -7,6 +7,7 @@ $scriptPaths = @(
     (Join-Path $repo 'scripts\record-native-runtime.ps1')
     (Join-Path $repo 'scripts\record-native-result.ps1')
     (Join-Path $repo 'scripts\validate-native-acceptance.ps1')
+    (Join-Path $repo 'scripts\test-native-acceptance-failclosed.ps1')
 )
 
 foreach ($path in @($schemaPath, $checksPath) + $scriptPaths) {
@@ -22,6 +23,19 @@ if ($schema.title -ne 'QS3D AutoCAD native acceptance evidence') {
 }
 if ($contract.schemaVersion -ne 1) {
     throw "Unsupported native acceptance check contract schema: $($contract.schemaVersion)"
+}
+
+$generationEnum = @($schema.properties.host.properties.generation.enum)
+foreach ($generation in @('2025','2026','2027')) {
+    if ($generationEnum -notcontains $generation) {
+        throw "Native evidence schema is missing AutoCAD generation $generation."
+    }
+}
+$statusEnum = @($schema.properties.checks.items.properties.status.enum)
+foreach ($status in @('pending','pass','fail','blocked')) {
+    if ($statusEnum -notcontains $status) {
+        throw "Native evidence schema is missing check status '$status'."
+    }
 }
 
 $ids = @($contract.checks | ForEach-Object { [string]$_.id })
@@ -68,6 +82,7 @@ $newSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\new-native-
 $recordSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\record-native-result.ps1')
 $runtimeSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\record-native-runtime.ps1')
 $validateSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\validate-native-acceptance.ps1')
+$rejectionSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\test-native-acceptance-failclosed.ps1')
 
 foreach ($requiredSnippet in @('All acceptance checks start as pending', "status = 'pending'", 'verify-artifacts.ps1', 'GetVersionInfo')) {
     if (-not $newSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
@@ -93,6 +108,11 @@ foreach ($requiredSnippet in @(
 )) {
     if (-not $validateSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native validator regression: missing '$requiredSnippet'."
+    }
+}
+foreach ($requiredSnippet in @('HOSTED-CI-SYNTHETIC', "status = 'pending'", 'CRITICAL: synthetic pending native evidence was not rejected')) {
+    if (-not $rejectionSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
+        throw "Native fail-closed smoke regression: missing '$requiredSnippet'."
     }
 }
 if (-not ($ids -contains 'ribbon_surface')) {
