@@ -12,7 +12,21 @@ This document defines the source/native boundary for issue #5 advanced modelling
 
 `Qs3dPointPreviewJig` is a transient drawing helper. It samples cursor points through `Editor.Drag`/`DrawJig`, creates short-lived preview `Entity` objects for a frame, invokes their `WorldDraw`, and disposes them. The helper must not start a transaction, append an entity, attach QS3D metadata/XData, or use `Geometry.Draw` with a short-lived drawable.
 
+The helper also accepts a transient annotation factory. Each sampled frame may create one short-lived `DBText` positioned near the cursor, draw it through `WorldDraw`, and dispose it immediately. Annotation graphics are never appended to the DWG and never become QS3D metadata.
+
 The command layer owns persistence. A command may create final DWG geometry only after `Editor.Drag` returns `PromptStatus.OK`. Cancel, ESC or any non-OK drag result returns before transaction/append/metadata work.
+
+## Live dimension/orientation content
+
+The values shown during drag are recomputed from the current sampled cursor point, not copied from final metadata:
+
+- Column: width, depth, height and axis-aligned plan angle.
+- Beam: live plan length, width, height and plan orientation angle.
+- Wall: live plan length, thickness, height and plan orientation angle.
+- Slab: current X/Y extents, thickness, rectangular plan area and axis-aligned orientation.
+- Curtain: live baseline length, current per-panel width derived from the maximum module, panel thickness, height and plan orientation angle.
+
+Text height is derived from the relevant section/thickness dimensions so it scales with drawing units rather than assuming a fixed millimetre text size.
 
 ## Native JIG acceptance
 
@@ -21,11 +35,13 @@ For each AutoCAD 2025, 2026 and 2027 native evidence session:
 1. start from a clean drawing and record current QS3D browser row count and `QS3DBOQ` totals;
 2. run each of the five JIG commands with representative positive dimensions;
 3. move the cursor without clicking and confirm the expected solid/panels visibly follow cursor sampling;
-4. press ESC and confirm no new persistent DWG object is left by the command;
-5. refresh the QS3D browser and rerun `QS3DBOQ`; row/count/quantity totals must match the pre-command values;
-6. repeat the command and accept placement; exactly the intended QS3D geometry/metadata must be committed and browser/BOQ must agree with visible geometry.
+4. while moving the cursor, verify the transient dimension/orientation label is visible and updates numerically with the current geometry; rotate Beam/Wall/Curtain baselines through multiple quadrants and verify the displayed plan angle follows cursor orientation;
+5. for Curtain, cross at least one panel-module threshold and verify the displayed live panel width changes consistently with the recomputed panel count;
+6. press ESC and confirm both the solid preview and annotation disappear and no new persistent DWG object/text is left by the command;
+7. refresh the QS3D browser and rerun `QS3DBOQ`; row/count/quantity totals must match the pre-command values;
+8. repeat the command and accept placement; exactly the intended QS3D geometry/metadata must be committed, no preview `DBText` must persist, and browser/BOQ must agree with visible geometry.
 
-Record these observations under native gates `jig_live_solid_preview` and `jig_cancel_safety`. Hosted CI/source review cannot set either gate to PASS.
+Record these observations under native gates `jig_live_solid_preview`, `jig_live_dimensions_orientation` and `jig_cancel_safety`. Hosted CI/source review cannot set these gates to PASS.
 
 ## Grid geometry snap
 
