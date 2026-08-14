@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory = $true)][string]$PfxPath,
     [Parameter(Mandatory = $true)][string]$Password,
     [string]$TimestampUrl = 'http://timestamp.digicert.com',
-    [switch]$SkipTimestamp
+    [switch]$SkipTimestamp,
+    [switch]$SkipTrustVerification
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,20 +50,24 @@ function Resolve-SignTool {
     throw "signtool.exe (x64) was not found under $kitsRoot. Install the Windows SDK signing tools."
 }
 
+Write-Host 'Resolving Windows signing tool...'
 $signToolPath = Resolve-SignTool
-$securePassword = ConvertTo-SecureString -String $Password -AsPlainText -Force
-$imported = @(Import-PfxCertificate -FilePath $PfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $securePassword -Exportable:$false)
-$certificate = $imported |
-    Where-Object { $_.HasPrivateKey } |
-    Sort-Object NotAfter -Descending |
-    Select-Object -First 1
+Write-Host "Using signtool: $signToolPath"
 
-if ($null -eq $certificate) {
-    foreach ($item in $imported) {
-        Remove-Item -LiteralPath "Cert:\CurrentUser\My\$($item.Thumbprint)" -Force -ErrorAction SilentlyContinue
-    }
-    throw 'The PFX did not import a certificate with a private key.'
+$storageFlags = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::UserKeySet -bor
+    [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::PersistKeySet
+$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($PfxPath, $Password, $storageFlags)
+if (-not $certificate.HasPrivateKey) {
+    $certificate.Dispose()
+    throw 'The PFX does not contain a private key.'
 }
+
+$store = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+    [System.Security.Cryptography.X509Certificates.StoreName]::My,
+    [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+$store.Add($certificate)
+Write-Host "Imported signing certificate $($certificate.Thumbprint) into CurrentUser/My."
 
 try {
     $signArguments = @('sign', '/fd', 'SHA256', '/sha1', $certificate.Thumbprint, '/s', 'My')
@@ -71,19 +76,41 @@ try {
     }
     $signArguments += $FilePath
 
+    Write-Host "Signing $(Split-Path -Leaf $FilePath)..."
     & $signToolPath @signArguments
     if ($LASTEXITCODE -ne 0) {
         throw "signtool failed for $FilePath with exit code $LASTEXITCODE."
     }
 
-    & $signToolPath verify /pa /all /v $FilePath
-    if ($LASTEXITCODE -ne 0) {
-        throw "Authenticode verification failed for $FilePath with exit code $LASTEXITCODE."
+    if ($SkipTrustVerification) {
+        Write-Host 'Verifying signer identity without trust-chain enforcement (smoke mode only)...'
+        $signature = Get-AuthenticodeSignature -LiteralPath $FilePath
+        if ($null -eq $signature.SignerCertificate) {
+            throw "Authenticode smoke verification did not find a signer certificate for $FilePath."
+        }
+        if ($signature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint) {
+            throw "Authenticode smoke signer mismatch for $FilePath."
+        }
+        if ($signature.Status -eq [System.Management.Automation.SignatureStatus]::NotSigned) {
+            throw "Authenticode smoke verification reports the file is not signed: $FilePath."
+        }
+    }
+    else {
+        Write-Host 'Verifying full Authenticode trust chain...'
+        & $signToolPath verify /pa /all /v $FilePath
+        if ($LASTEXITCODE -ne 0) {
+            throw "Authenticode verification failed for $FilePath with exit code $LASTEXITCODE."
+        }
     }
 }
 finally {
-    foreach ($item in $imported) {
-        Remove-Item -LiteralPath "Cert:\CurrentUser\My\$($item.Thumbprint)" -Force -ErrorAction SilentlyContinue
+    try {
+        $store.Remove($certificate)
+    }
+    finally {
+        $store.Close()
+        $store.Dispose()
+        $certificate.Dispose()
     }
 }
 
