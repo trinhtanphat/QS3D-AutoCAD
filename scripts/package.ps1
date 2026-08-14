@@ -21,7 +21,6 @@ Copy-Item -Recurse -Force (Join-Path $bundleSource '*') $stage
 $manifest = Join-Path $stage 'PackageContents.xml'
 [xml]$xml = Get-Content -Raw $manifest
 $xml.ApplicationPackage.AppVersion = $Version
-foreach ($entry in $xml.ApplicationPackage.Components.ComponentEntry) { $entry.Version = $Version }
 $xml.Save($manifest)
 
 dotnet build $project -c Release -f net8.0-windows -p:AutoCADSdkDir="$AutoCAD2026SdkDir"
