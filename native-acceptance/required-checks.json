@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "checks": [
+    { "id": "installer_exact_candidate", "description": "Install the exact candidate with generated Setup.exe; no manual NETLOAD or substituted DLLs." },
+    { "id": "bundle_command_autoload", "description": "AutoCAD discovers QS3D.bundle and the QS3D command lazy-loads the plugin." },
+    { "id": "palette_startup", "description": "QS3D dockable workspace opens without startup/NETLOAD failure." },
+    { "id": "level_workflow", "description": "Create/edit Level and verify linked annotation and metadata." },
+    { "id": "grid_workflow", "description": "Create/edit Grid, Grid array and dependency/reference operations." },
+    { "id": "column_workflow", "description": "Create/edit Column geometry and metadata." },
+    { "id": "beam_workflow", "description": "Create/edit Beam geometry and metadata." },
+    { "id": "slab_workflow", "description": "Create/edit Slab geometry and metadata." },
+    { "id": "wall_workflow", "description": "Create/edit Wall geometry and metadata." },
+    { "id": "curtain_workflow", "description": "Create/edit Curtain geometry and metadata." },
+    { "id": "section_workflow", "description": "Create/edit Section marker and linked annotation." },
+    { "id": "boq_semantics", "description": "QS3DBOQ counts only QS3D-owned entities and quantities remain aligned with visible geometry." },
+    { "id": "browser_selection_sync", "description": "Drawing pickfirst selection and project browser/property inspector synchronize both directions." },
+    { "id": "level_dependency_propagation", "description": "Assign element to Level, move Level, and verify physical geometry plus metadata move together." },
+    { "id": "grid_dependency_safety", "description": "Bind/clear Grid references and verify deletion is blocked while dependents remain." },
+    { "id": "undo_redo", "description": "Creation and geometry-safe edits participate correctly in AutoCAD undo/redo." },
+    { "id": "save_reopen_persistence", "description": "After save/close/reopen, project XRecord, QS3D XData and Level/Grid references persist." },
+    { "id": "restart_lazy_load", "description": "After restarting AutoCAD, command-invocation autoload still works from the installed bundle." },
+    { "id": "upgrade_transaction", "description": "Setup upgrade preserves/rolls back the installed bundle correctly and the upgraded candidate loads." },
+    { "id": "uninstall", "description": "Setup --uninstall removes QS3D.bundle and AutoCAD no longer exposes QS3D commands on restart." },
+    { "id": "ribbon_surface", "description": "QS3D Ribbon tab/panels are present and invoke the intended commands through the installed AutoCAD UI runtime." },
+    { "id": "ribbon_visual_qa", "description": "Ribbon/workspace is usable at high DPI and AutoCAD light/dark themes on the tested host." },
+    { "id": "artifact_provenance_match", "description": "Installed/tested artifact hashes and exact source SHA match RELEASE-PROVENANCE.json." }
+  ]
+}
