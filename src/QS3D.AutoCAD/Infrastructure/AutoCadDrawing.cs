@@ -1,6 +1,7 @@
 using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
+using AcColor = Autodesk.AutoCAD.Colors.Color;
 
 namespace QS3D.AutoCAD.Infrastructure;
 
@@ -18,7 +19,7 @@ internal static class AutoCadDrawing
         var record = new LayerTableRecord
         {
             Name = name,
-            Color = Color.FromColorIndex(ColorMethod.ByAci, colorIndex)
+            Color = AcColor.FromColorIndex(ColorMethod.ByAci, colorIndex)
         };
         var id = layerTable.Add(record);
         transaction.AddNewlyCreatedDBObject(record, true);
