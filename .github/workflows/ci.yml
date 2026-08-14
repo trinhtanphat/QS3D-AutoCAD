@@ -29,6 +29,9 @@ jobs:
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
+      - name: Release security policy guards
+        shell: pwsh
+        run: ./scripts/validate-release-policy.ps1
       - name: Package and verify release contract
         shell: pwsh
         run: |
