@@ -115,6 +115,9 @@ foreach ($requiredSnippet in @('HOSTED-CI-SYNTHETIC', "status = 'pending'", 'CRI
         throw "Native fail-closed smoke regression: missing '$requiredSnippet'."
     }
 }
+if ($newSource.Contains('$LASTEXITCODE', [StringComparison]::Ordinal) -or $validateSource.Contains('$LASTEXITCODE', [StringComparison]::Ordinal)) {
+    throw 'Native evidence scripts must rely on PowerShell verifier exceptions, not potentially stale $LASTEXITCODE state.'
+}
 if (-not ($ids -contains 'ribbon_surface')) {
     throw 'Native validator contract must keep Ribbon as a required native gate.'
 }
