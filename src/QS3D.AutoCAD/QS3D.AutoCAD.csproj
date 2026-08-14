@@ -9,34 +9,15 @@
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
-    <AutoCADSdkDir Condition="'$(AutoCADSdkDir)' == ''">$(AUTOCAD_2026_SDK_DIR)</AutoCADSdkDir>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
-    <AutoCADSdkDir Condition="'$(AutoCADSdkDir)' == ''">$(AUTOCAD_2027_SDK_DIR)</AutoCADSdkDir>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="../QS3D.Core/QS3D.Core.csproj" />
-    <Reference Include="AcCoreMgd">
-      <HintPath>$(AutoCADSdkDir)\AcCoreMgd.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="AcDbMgd">
-      <HintPath>$(AutoCADSdkDir)\AcDbMgd.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="AcMgd">
-      <HintPath>$(AutoCADSdkDir)\AcMgd.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
   </ItemGroup>
 
-  <Target Name="ValidateAutoCADSdk" BeforeTargets="ResolveReferences" Condition="'$(DesignTimeBuild)' != 'true'">
-    <Error Condition="'$(AutoCADSdkDir)' == ''" Text="AutoCADSdkDir is not configured. Set AUTOCAD_2026_SDK_DIR for net8.0-windows or AUTOCAD_2027_SDK_DIR for net10.0-windows." />
-    <Error Condition="!Exists('$(AutoCADSdkDir)\AcCoreMgd.dll')" Text="AcCoreMgd.dll was not found under $(AutoCADSdkDir)." />
-    <Error Condition="!Exists('$(AutoCADSdkDir)\AcDbMgd.dll')" Text="AcDbMgd.dll was not found under $(AutoCADSdkDir)." />
-    <Error Condition="!Exists('$(AutoCADSdkDir)\AcMgd.dll')" Text="AcMgd.dll was not found under $(AutoCADSdkDir)." />
-  </Target>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <PackageReference Include="AutoCAD.NET" Version="25.0.1" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <PackageReference Include="AutoCAD.NET" Version="26.0.0" ExcludeAssets="runtime" />
+  </ItemGroup>
 </Project>
