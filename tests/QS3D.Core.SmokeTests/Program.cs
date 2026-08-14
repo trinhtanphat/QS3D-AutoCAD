@@ -75,6 +75,26 @@ AssertNear(shifted.Start.Z, 4.0, "shifted start elevation");
 AssertNear(shifted.End.Z, 4.0, "shifted end elevation");
 Assert(shifted.LevelId == level.Id, "elevation shift must preserve placement references");
 
+var levelLow = ElementFactory.Marker(ElementKind.Level, "Roof", new Point3(0, 0, 0), new Point3(0, 0, 0));
+var levelMid = ElementFactory.Marker(ElementKind.Level, "Ground", new Point3(0, 0, 3.6), new Point3(0, 0, 3.6));
+var levelHigh = ElementFactory.Marker(ElementKind.Level, "Mezz", new Point3(0, 0, 7.2), new Point3(0, 0, 7.2));
+var orderedLevels = ReferenceManagerService.OrderLevels([levelHigh, beam, levelLow, levelMid]);
+Assert(orderedLevels.Select(item => item.Id).SequenceEqual([levelLow.Id, levelMid.Id, levelHigh.Id]), "levels must order by elevation, not DB/input order");
+var descendingLevels = ReferenceManagerService.OrderLevels([levelLow, levelHigh, levelMid], descending: true);
+Assert(descendingLevels.Select(item => item.Id).SequenceEqual([levelHigh.Id, levelMid.Id, levelLow.Id]), "descending Level manager order");
+var renamedLevel = ReferenceManagerService.RenameReference(levelMid, " Level 02 ");
+Assert(renamedLevel.Name == "Level 02", "reference rename trims name");
+Assert(renamedLevel.Id == levelMid.Id, "reference rename must preserve semantic identity");
+
+var gridLeft = ElementFactory.Marker(ElementKind.Grid, "Z", new Point3(-3, -5, 0), new Point3(-3, 5, 0));
+var gridCenterReversed = ElementFactory.Marker(ElementKind.Grid, "Y", new Point3(0, 5, 0), new Point3(0, -5, 0));
+var gridRight = ElementFactory.Marker(ElementKind.Grid, "X", new Point3(4, -5, 0), new Point3(4, 5, 0));
+var orderedGrids = ReferenceManagerService.OrderParallelGrids([gridRight, gridCenterReversed, gridLeft]);
+Assert(orderedGrids.Select(item => item.Id).SequenceEqual([gridLeft.Id, gridCenterReversed.Id, gridRight.Id]), "parallel Grids must order by spatial offset regardless of line direction/input order");
+AssertThrows<InvalidOperationException>(
+    () => ReferenceManagerService.OrderParallelGrids([gridLeft, gridHorizontal]),
+    "non-parallel Grid families must not be silently resequenced together");
+
 Console.WriteLine("QS3D.Core smoke tests passed.");
 
 static void Assert(bool condition, string message)
