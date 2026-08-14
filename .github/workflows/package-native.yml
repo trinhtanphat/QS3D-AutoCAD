@@ -27,4 +27,5 @@ jobs:
           path: |
             artifacts/QS3D-AutoCAD-${{ inputs.version }}.zip
             artifacts/QS3D-AutoCAD-${{ inputs.version }}-Setup.exe
+            artifacts/SHA256SUMS.txt
           if-no-files-found: error
