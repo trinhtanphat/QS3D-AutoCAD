@@ -23,10 +23,18 @@ internal static class Qs3dRibbon
             new("Curtain", "QS3DCURTAIN"),
             new("Section", "QS3DSECTION")
         ]),
+        new("Live Preview", [
+            new("Column 3D", "QS3DCOLUMNJIG"),
+            new("Beam 3D", "QS3DBEAMJIG"),
+            new("Slab 3D", "QS3DSLABJIG"),
+            new("Wall 3D", "QS3DWALLJIG"),
+            new("Curtain 3D", "QS3DCURTAINJIG")
+        ]),
         new("References", [
             new("Assign Level", "QS3DASSIGNLEVEL"),
             new("Move Level", "QS3DLEVELMOVE"),
             new("Bind Grid", "QS3DBINDGRID"),
+            new("Snap to Grids", "QS3DGRIDSNAP"),
             new("Clear Refs", "QS3DCLEARREFS"),
             new("Grid Array", "QS3DGRIDARRAY"),
             new("References", "QS3DREFERENCES")
