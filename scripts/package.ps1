@@ -12,6 +12,7 @@ $stage = Join-Path $artifacts 'QS3D.bundle'
 $zip = Join-Path $artifacts "QS3D-AutoCAD-$Version.zip"
 $setupOutput = Join-Path $artifacts 'setup-publish'
 $setupExe = Join-Path $artifacts "QS3D-AutoCAD-$Version-Setup.exe"
+$checksums = Join-Path $artifacts 'SHA256SUMS.txt'
 
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $setupOutput -ErrorAction SilentlyContinue
@@ -51,5 +52,12 @@ $publishedSetup = Join-Path $setupOutput 'QS3D-AutoCAD-Setup.exe'
 if (-not (Test-Path $publishedSetup)) { throw "Setup executable was not produced at $publishedSetup" }
 Copy-Item -Force $publishedSetup $setupExe
 
+$checksumLines = foreach ($path in @($zip, $setupExe)) {
+    $hash = Get-FileHash -Algorithm SHA256 $path
+    "{0}  {1}" -f $hash.Hash.ToLowerInvariant(), (Split-Path -Leaf $path)
+}
+Set-Content -Path $checksums -Value $checksumLines -Encoding ascii
+
 Write-Host "Created $zip"
 Write-Host "Created $setupExe"
+Write-Host "Created $checksums"
