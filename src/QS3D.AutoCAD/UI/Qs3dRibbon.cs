@@ -35,6 +35,9 @@ internal static class Qs3dRibbon
             new("Move Level", "QS3DLEVELMOVE"),
             new("Bind Grid", "QS3DBINDGRID"),
             new("Snap to Grids", "QS3DGRIDSNAP"),
+            new("Rename Ref", "QS3DREFERENCERENAME"),
+            new("Sequence Levels", "QS3DLEVELSEQUENCE"),
+            new("Sequence Grids", "QS3DGRIDSEQUENCE"),
             new("Clear Refs", "QS3DCLEARREFS"),
             new("Grid Array", "QS3DGRIDARRAY"),
             new("References", "QS3DREFERENCES")
