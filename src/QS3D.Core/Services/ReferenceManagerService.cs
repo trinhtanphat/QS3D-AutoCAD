@@ -131,7 +131,7 @@ public static class ReferenceManagerService
 
     private static void ValidateTolerance(double tolerance)
     {
-        if (!double.IsFinite(tolerance) || tolerance <= 0)
+        if (double.IsNaN(tolerance) || double.IsInfinity(tolerance) || tolerance <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(tolerance), "Grid ordering tolerance must be finite and positive.");
         }
