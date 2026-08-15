@@ -51,7 +51,7 @@ internal static class MepRecognitionProfileProvider
 
     internal static void Save(MepRecognitionProfile profile)
     {
-        ArgumentNullException.ThrowIfNull(profile);
+        if (profile is null) throw new ArgumentNullException(nameof(profile));
         MepRecognitionProfileStore.SaveAtomic(profile);
         lock (Gate)
         {
@@ -139,7 +139,7 @@ internal static class MepRecognitionProfileStore
 
     internal static void SaveAtomic(MepRecognitionProfile profile)
     {
-        ArgumentNullException.ThrowIfNull(profile);
+        if (profile is null) throw new ArgumentNullException(nameof(profile));
         if (profile.Rules.Count <= 0 || profile.Rules.Count > MaxRules)
             throw new InvalidOperationException("Recognition profile rule count must be within 1.." + MaxRules + ".");
         var path = ProfilePath;
