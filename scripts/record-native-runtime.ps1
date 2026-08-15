@@ -10,7 +10,7 @@ if (-not (Test-Path -LiteralPath $EvidencePath -PathType Leaf)) {
     throw "Native acceptance evidence file not found: $EvidencePath"
 }
 if ($ObservedClrVersion -notmatch '^(?<major>\d+)(?:\.\d+){1,3}(?:[-+].+)?$') {
-    throw "Observed CLR version must be a concrete version such as 8.0.22 or 10.0.0: $ObservedClrVersion"
+    throw "Observed CLR version must be a concrete version such as 4.0.30319.42000, 8.0.22 or 10.0.0: $ObservedClrVersion"
 }
 
 $evidence = Get-Content -Raw -LiteralPath $EvidencePath | ConvertFrom-Json
@@ -18,7 +18,11 @@ if ($evidence.schemaVersion -ne 1 -or $evidence.product -ne 'QS3D AutoCAD') {
     throw 'Evidence file is not a supported QS3D AutoCAD native acceptance session.'
 }
 
-$expectedMajor = if ([string]$evidence.host.generation -eq '2027') { 10 } else { 8 }
+$expectedMajor = switch ([string]$evidence.host.generation) {
+    '2021' { 4 }
+    '2027' { 10 }
+    default { 8 }
+}
 $actualMajor = [int]$Matches.major
 $status = if ($actualMajor -eq $expectedMajor) { 'pass' } else { 'fail' }
 $now = [DateTimeOffset]::UtcNow.ToString('O')
