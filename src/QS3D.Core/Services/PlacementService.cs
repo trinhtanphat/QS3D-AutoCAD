@@ -121,7 +121,7 @@ public static class PlacementService
 
     public static StructuralElement ShiftElevation(StructuralElement element, double delta)
     {
-        if (!double.IsFinite(delta))
+        if (double.IsNaN(delta) || double.IsInfinity(delta))
         {
             throw new ArgumentOutOfRangeException(nameof(delta), "Elevation delta must be finite.");
         }
