@@ -21,7 +21,7 @@ foreach ($required in @(
     'QS3DMEPCLASHLOCATE',
     'QS3DMEPEXACTCLASH',
     'QS3DMEPZOOMSELECTION',
-    'MepRecognitionProfiles.CreateDefault()',
+    'MepRecognitionProfileProvider.Current.Recognize',
     'new MepQuantityService().Aggregate',
     'new ClashDetectionService().Detect',
     'left.Solid.CheckInterference',
