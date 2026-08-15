@@ -36,6 +36,8 @@ try {
 
     foreach ($relative in @(
         'PackageContents.xml',
+        'Contents\2021\QS3D.AutoCAD.dll',
+        'Contents\2021\QS3D.Core.dll',
         'Contents\2025-2026\QS3D.AutoCAD.dll',
         'Contents\2025-2026\QS3D.Core.dll',
         'Contents\2027\QS3D.AutoCAD.dll',
@@ -45,6 +47,12 @@ try {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             throw "Setup runtime smoke installed an incomplete bundle: missing $relative"
         }
+    }
+
+    [xml]$installedManifest = Get-Content -Raw -LiteralPath (Join-Path $bundle 'PackageContents.xml')
+    $runtimeRequirements = @($installedManifest.ApplicationPackage.Components.RuntimeRequirements)
+    if (@($runtimeRequirements | Where-Object { $_.SeriesMin -eq 'R24.0' -and $_.SeriesMax -eq 'R24.0' }).Count -ne 1) {
+        throw 'Setup runtime smoke installed a bundle without the AutoCAD 2021 R24.0 runtime declaration.'
     }
 
     & $resolvedSetup --uninstall --install-root $testRoot --skip-autocad-check --quiet
@@ -87,7 +95,7 @@ try {
         throw 'Setup elevated-child protocol smoke log is missing the explicit completion-result record.'
     }
 
-    Write-Host 'QS3D Setup install/uninstall runtime and elevated-child result protocol smoke passed.'
+    Write-Host 'QS3D Setup install/uninstall runtime and elevated-child result protocol smoke passed, including AutoCAD 2021 payload verification.'
 }
 finally {
     Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
