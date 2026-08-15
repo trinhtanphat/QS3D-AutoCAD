@@ -1,12 +1,18 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
     [string]$ExpectedCommit = '',
-    [switch]$RequireSigned
+    [switch]$RequireSigned,
+    [string]$ArtifactsDirectory = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$artifacts = Join-Path $repo 'artifacts'
+$artifacts = if ([string]::IsNullOrWhiteSpace($ArtifactsDirectory)) {
+    Join-Path $repo 'artifacts'
+}
+else {
+    [IO.Path]::GetFullPath($ArtifactsDirectory)
+}
 $zipName = "QS3D-AutoCAD-$Version.zip"
 $setupName = "QS3D-AutoCAD-$Version-Setup.exe"
 $provenanceName = 'RELEASE-PROVENANCE.json'
@@ -71,6 +77,9 @@ foreach ($line in Get-Content -LiteralPath $checksums) {
     if ($line -notmatch '^([0-9a-fA-F]{64})  (.+)$') {
         throw "Malformed SHA256SUMS line: $line"
     }
+    if ($checksumMap.ContainsKey($Matches[2])) {
+        throw "SHA256SUMS contains a duplicate filename: $($Matches[2])"
+    }
     $checksumMap[$Matches[2]] = $Matches[1].ToLowerInvariant()
 }
 
@@ -81,4 +90,5 @@ foreach ($fileName in @($zipName, $setupName, $provenanceName)) {
 }
 
 Write-Host "Release artifacts verified for version $Version at commit $ExpectedCommit."
+Write-Host "Artifacts directory: $artifacts"
 Write-Host "Authenticode signing recorded by provenance: $($manifest.signed)"

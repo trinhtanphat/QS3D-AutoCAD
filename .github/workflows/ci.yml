@@ -83,6 +83,9 @@ jobs:
       - name: Native acceptance contract guards
         shell: pwsh
         run: ./scripts/validate-native-acceptance-contract.ps1
+      - name: Operational readiness tooling guards
+        shell: pwsh
+        run: ./scripts/test-ops-tooling.ps1
       - name: Package and verify release contract
         shell: pwsh
         run: |
