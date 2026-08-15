@@ -1,14 +1,22 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Forms.Integration;
-using System.Windows.Media;
 using QS3D.AutoCAD.Infrastructure;
 using AcApplication = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 using WpfBorder = System.Windows.Controls.Border;
+using WpfBrush = System.Windows.Media.Brush;
+using WpfBrushes = System.Windows.Media.Brushes;
 using WpfButton = System.Windows.Controls.Button;
+using WpfContentControl = System.Windows.Controls.ContentControl;
+using WpfFontFamily = System.Windows.Media.FontFamily;
+using WpfGrid = System.Windows.Controls.Grid;
+using WpfHorizontalAlignment = System.Windows.HorizontalAlignment;
+using WpfOrientation = System.Windows.Controls.Orientation;
+using WpfScrollViewer = System.Windows.Controls.ScrollViewer;
+using WpfStackPanel = System.Windows.Controls.StackPanel;
 using WpfTextBlock = System.Windows.Controls.TextBlock;
 using WpfTextBox = System.Windows.Controls.TextBox;
 using WpfUserControl = System.Windows.Controls.UserControl;
+using WpfVerticalAlignment = System.Windows.VerticalAlignment;
+using WpfWindowsFormsHost = System.Windows.Forms.Integration.WindowsFormsHost;
+using WpfWrapPanel = System.Windows.Controls.WrapPanel;
 
 namespace QS3D.AutoCAD.UI;
 
@@ -22,14 +30,14 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
     private const string SearchPage = "search";
 
     private readonly WorkspaceTheme _theme = WorkspaceTheme.Detect();
-    private readonly Dictionary<string, FrameworkElement> _pages = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, System.Windows.FrameworkElement> _pages = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WpfButton> _navButtons = new(StringComparer.Ordinal);
     private readonly List<WpfButton> _localizedButtons = [];
     private readonly List<WpfTextBlock> _localizedText = [];
     private readonly Qs3dBrowserControl _browser = new();
-    private readonly ContentControl _content = new();
+    private readonly WpfContentControl _content = new();
     private readonly WpfTextBox _search = new();
-    private readonly StackPanel _searchResults = new();
+    private readonly WpfStackPanel _searchResults = new();
     private readonly WpfTextBlock _drawingValue = new();
     private readonly WpfTextBlock _elementValue = new();
     private readonly WpfTextBlock _status = new();
@@ -37,7 +45,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
 
     public Qs3dWorkspaceControl()
     {
-        FontFamily = new FontFamily("Segoe UI");
+        FontFamily = new WpfFontFamily("Segoe UI");
         Background = _theme.Background;
         Foreground = _theme.Foreground;
         Content = BuildLayout();
@@ -69,13 +77,13 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         _status.Text = UiText.Get("statusReady");
     }
 
-    private FrameworkElement BuildLayout()
+    private System.Windows.FrameworkElement BuildLayout()
     {
-        var root = new Grid { Background = _theme.Background };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var root = new WpfGrid { Background = _theme.Background };
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+        root.RowDefinitions.Add(new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto });
 
         AddRow(root, BuildHeader(), 0);
         AddRow(root, BuildSearchBar(), 1);
@@ -84,32 +92,32 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         return root;
     }
 
-    private FrameworkElement BuildHeader()
+    private System.Windows.FrameworkElement BuildHeader()
     {
         var border = new WpfBorder
         {
             Background = _theme.Header,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(18, 14, 14, 12)
+            BorderThickness = new System.Windows.Thickness(0, 0, 0, 1),
+            Padding = new System.Windows.Thickness(18, 14, 14, 12)
         };
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var grid = new WpfGrid();
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = System.Windows.GridLength.Auto });
 
-        var identity = new StackPanel();
+        var identity = new WpfStackPanel();
         identity.Children.Add(new WpfTextBlock
         {
             Text = "QS3D",
             FontSize = 21,
-            FontWeight = FontWeights.SemiBold,
+            FontWeight = System.Windows.FontWeights.SemiBold,
             Foreground = _theme.Foreground
         });
         identity.Children.Add(new WpfTextBlock
         {
             Text = "AutoCAD workspace",
             FontSize = 11,
-            Margin = new Thickness(0, 2, 0, 0),
+            Margin = new System.Windows.Thickness(0, 2, 0, 0),
             Foreground = _theme.Muted
         });
         grid.Children.Add(identity);
@@ -118,10 +126,10 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         {
             Background = _theme.Card,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(10, 5, 10, 5),
-            VerticalAlignment = VerticalAlignment.Center,
+            BorderThickness = new System.Windows.Thickness(1),
+            CornerRadius = new System.Windows.CornerRadius(12),
+            Padding = new System.Windows.Thickness(10, 5, 10, 5),
+            VerticalAlignment = WpfVerticalAlignment.Center,
             Child = new WpfTextBlock
             {
                 Text = $"CLR {Environment.Version}",
@@ -129,55 +137,55 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
                 Foreground = _theme.Muted
             }
         };
-        Grid.SetColumn(runtime, 1);
+        WpfGrid.SetColumn(runtime, 1);
         grid.Children.Add(runtime);
         border.Child = grid;
         return border;
     }
 
-    private FrameworkElement BuildSearchBar()
+    private System.Windows.FrameworkElement BuildSearchBar()
     {
         var host = new WpfBorder
         {
             Background = _theme.Background,
-            Padding = new Thickness(14, 10, 14, 10)
+            Padding = new System.Windows.Thickness(14, 10, 14, 10)
         };
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var grid = new WpfGrid();
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = System.Windows.GridLength.Auto });
 
         _search.Height = 34;
-        _search.Padding = new Thickness(10, 6, 10, 6);
+        _search.Padding = new System.Windows.Thickness(10, 6, 10, 6);
         _search.Background = _theme.Input;
         _search.Foreground = _theme.Foreground;
         _search.BorderBrush = _theme.Border;
-        _search.BorderThickness = new Thickness(1);
-        _search.VerticalContentAlignment = VerticalAlignment.Center;
+        _search.BorderThickness = new System.Windows.Thickness(1);
+        _search.VerticalContentAlignment = WpfVerticalAlignment.Center;
         _search.TextChanged += (_, _) => ApplySearch();
         grid.Children.Add(_search);
 
         var language = CreateToolbarButton("language", UiText.Toggle);
-        language.Margin = new Thickness(8, 0, 0, 0);
-        Grid.SetColumn(language, 1);
+        language.Margin = new System.Windows.Thickness(8, 0, 0, 0);
+        WpfGrid.SetColumn(language, 1);
         grid.Children.Add(language);
         host.Child = grid;
         return host;
     }
 
-    private FrameworkElement BuildBody()
+    private System.Windows.FrameworkElement BuildBody()
     {
-        var body = new Grid();
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(152) });
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var body = new WpfGrid();
+        body.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(152) });
+        body.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
 
         var nav = new WpfBorder
         {
             Background = _theme.Sidebar,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(0, 0, 1, 0),
-            Padding = new Thickness(8, 10, 8, 10)
+            BorderThickness = new System.Windows.Thickness(0, 0, 1, 0),
+            Padding = new System.Windows.Thickness(8, 10, 8, 10)
         };
-        var navStack = new StackPanel();
+        var navStack = new WpfStackPanel();
         navStack.Children.Add(CreateNavButton(HomePage, "home"));
         navStack.Children.Add(CreateNavButton(ModelPage, "model"));
         navStack.Children.Add(CreateNavButton(ReferencesPage, "references"));
@@ -194,28 +202,28 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         _pages[SearchPage] = BuildSearchPage();
 
         _content.Content = _pages[HomePage];
-        Grid.SetColumn(_content, 1);
+        WpfGrid.SetColumn(_content, 1);
         body.Children.Add(_content);
         return body;
     }
 
-    private FrameworkElement BuildHomePage()
+    private System.Windows.FrameworkElement BuildHomePage()
     {
-        var stack = new StackPanel { Margin = new Thickness(16) };
+        var stack = new WpfStackPanel { Margin = new System.Windows.Thickness(16) };
         stack.Children.Add(CreateSectionTitle("projectSummary"));
 
-        var summary = new Grid { Margin = new Thickness(0, 8, 0, 18) };
-        summary.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        summary.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var summary = new WpfGrid { Margin = new System.Windows.Thickness(0, 8, 0, 18) };
+        summary.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+        summary.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
         summary.Children.Add(CreateMetricCard("activeDrawing", _drawingValue));
         var elementCard = CreateMetricCard("elementCount", _elementValue);
-        elementCard.Margin = new Thickness(8, 0, 0, 0);
-        Grid.SetColumn(elementCard, 1);
+        elementCard.Margin = new System.Windows.Thickness(8, 0, 0, 0);
+        WpfGrid.SetColumn(elementCard, 1);
         summary.Children.Add(elementCard);
         stack.Children.Add(summary);
 
         stack.Children.Add(CreateSectionTitle("quickActions"));
-        var quick = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        var quick = new WpfWrapPanel { Margin = new System.Windows.Thickness(0, 8, 0, 0) };
         foreach (var command in Qs3dCommandCatalog.All.Where(item => item.Primary).Take(10))
         {
             quick.Children.Add(CreateCommandCard(command, true));
@@ -224,11 +232,11 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         return Scroll(stack);
     }
 
-    private FrameworkElement BuildCommandPage(string titleKey, IEnumerable<Qs3dCommandDescriptor> commands)
+    private System.Windows.FrameworkElement BuildCommandPage(string titleKey, IEnumerable<Qs3dCommandDescriptor> commands)
     {
-        var stack = new StackPanel { Margin = new Thickness(16) };
+        var stack = new WpfStackPanel { Margin = new System.Windows.Thickness(16) };
         stack.Children.Add(CreateSectionTitle(titleKey));
-        var wrap = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        var wrap = new WpfWrapPanel { Margin = new System.Windows.Thickness(0, 8, 0, 0) };
         foreach (var command in commands)
         {
             wrap.Children.Add(CreateCommandCard(command, false));
@@ -237,58 +245,53 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         return Scroll(stack);
     }
 
-    private FrameworkElement BuildProjectPage()
+    private System.Windows.FrameworkElement BuildProjectPage()
     {
-        return new Grid
+        var grid = new WpfGrid { Margin = new System.Windows.Thickness(12) };
+        grid.Children.Add(new WpfWindowsFormsHost
         {
-            Margin = new Thickness(12),
-            Children =
-            {
-                new WindowsFormsHost
-                {
-                    Child = _browser,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    VerticalAlignment = VerticalAlignment.Stretch
-                }
-            }
-        };
+            Child = _browser,
+            HorizontalAlignment = WpfHorizontalAlignment.Stretch,
+            VerticalAlignment = WpfVerticalAlignment.Stretch
+        });
+        return grid;
     }
 
-    private FrameworkElement BuildSearchPage()
+    private System.Windows.FrameworkElement BuildSearchPage()
     {
-        var stack = new StackPanel { Margin = new Thickness(16) };
+        var stack = new WpfStackPanel { Margin = new System.Windows.Thickness(16) };
         stack.Children.Add(CreateSectionTitle("commandSearch"));
-        _searchResults.Margin = new Thickness(0, 8, 0, 0);
+        _searchResults.Margin = new System.Windows.Thickness(0, 8, 0, 0);
         stack.Children.Add(_searchResults);
         return Scroll(stack);
     }
 
-    private FrameworkElement BuildFooter()
+    private System.Windows.FrameworkElement BuildFooter()
     {
         var border = new WpfBorder
         {
             Background = _theme.Header,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            Padding = new Thickness(14, 7, 14, 7)
+            BorderThickness = new System.Windows.Thickness(0, 1, 0, 0),
+            Padding = new System.Windows.Thickness(14, 7, 14, 7)
         };
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var grid = new WpfGrid();
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = System.Windows.GridLength.Auto });
         _status.FontSize = 10.5;
         _status.Foreground = _theme.Muted;
-        _status.VerticalAlignment = VerticalAlignment.Center;
+        _status.VerticalAlignment = WpfVerticalAlignment.Center;
         grid.Children.Add(_status);
 
-        var actions = new StackPanel { Orientation = Orientation.Horizontal };
+        var actions = new WpfStackPanel { Orientation = WpfOrientation.Horizontal };
         actions.Children.Add(CreateToolbarButton("refresh", RefreshData));
         var ribbon = CreateToolbarButton("ribbon", () => Qs3dCommandDispatcher.Execute("QS3DRIBBON"));
-        ribbon.Margin = new Thickness(6, 0, 0, 0);
+        ribbon.Margin = new System.Windows.Thickness(6, 0, 0, 0);
         actions.Children.Add(ribbon);
         var about = CreateToolbarButton("about", () => Qs3dCommandDispatcher.Execute("QS3DABOUT"));
-        about.Margin = new Thickness(6, 0, 0, 0);
+        about.Margin = new System.Windows.Thickness(6, 0, 0, 0);
         actions.Children.Add(about);
-        Grid.SetColumn(actions, 1);
+        WpfGrid.SetColumn(actions, 1);
         grid.Children.Add(actions);
         border.Child = grid;
         return border;
@@ -301,13 +304,13 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             Tag = labelKey,
             Content = UiText.Get(labelKey),
             Height = 38,
-            Margin = new Thickness(0, 0, 0, 5),
-            Padding = new Thickness(10, 6, 10, 6),
-            HorizontalContentAlignment = HorizontalAlignment.Left,
-            Background = Brushes.Transparent,
+            Margin = new System.Windows.Thickness(0, 0, 0, 5),
+            Padding = new System.Windows.Thickness(10, 6, 10, 6),
+            HorizontalContentAlignment = WpfHorizontalAlignment.Left,
+            Background = WpfBrushes.Transparent,
             Foreground = _theme.Foreground,
-            BorderBrush = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
+            BorderBrush = WpfBrushes.Transparent,
+            BorderThickness = new System.Windows.Thickness(0),
             Cursor = System.Windows.Input.Cursors.Hand
         };
         button.Click += (_, _) => ShowPage(page);
@@ -323,11 +326,11 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             Tag = labelKey,
             Content = UiText.Get(labelKey),
             Height = 32,
-            Padding = new Thickness(10, 4, 10, 4),
+            Padding = new System.Windows.Thickness(10, 4, 10, 4),
             Background = _theme.Card,
             Foreground = _theme.Foreground,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(1),
+            BorderThickness = new System.Windows.Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand
         };
         button.Click += (_, _) => action();
@@ -335,25 +338,25 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         return button;
     }
 
-    private FrameworkElement CreateCommandCard(Qs3dCommandDescriptor command, bool compact)
+    private System.Windows.FrameworkElement CreateCommandCard(Qs3dCommandDescriptor command, bool compact)
     {
         var title = new WpfTextBlock
         {
             Tag = command.LabelKey,
             Text = UiText.Get(command.LabelKey),
-            FontWeight = FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap,
+            FontWeight = System.Windows.FontWeights.SemiBold,
+            TextWrapping = System.Windows.TextWrapping.Wrap,
             Foreground = _theme.Foreground
         };
         _localizedText.Add(title);
 
-        var content = new StackPanel();
+        var content = new WpfStackPanel();
         content.Children.Add(title);
         content.Children.Add(new WpfTextBlock
         {
             Text = command.Command,
             FontSize = 9.5,
-            Margin = new Thickness(0, 4, 0, 0),
+            Margin = new System.Windows.Thickness(0, 4, 0, 0),
             Foreground = _theme.Muted
         });
 
@@ -362,13 +365,13 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             ToolTip = command.Command,
             Width = compact ? 176 : 218,
             MinHeight = compact ? 58 : 72,
-            Margin = new Thickness(0, 0, 8, 8),
-            Padding = new Thickness(12, 9, 12, 9),
-            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Margin = new System.Windows.Thickness(0, 0, 8, 8),
+            Padding = new System.Windows.Thickness(12, 9, 12, 9),
+            HorizontalContentAlignment = WpfHorizontalAlignment.Left,
             Background = _theme.Card,
             Foreground = _theme.Foreground,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(1),
+            BorderThickness = new System.Windows.Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand,
             Content = content
         };
@@ -383,9 +386,9 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
     private WpfBorder CreateMetricCard(string labelKey, WpfTextBlock value)
     {
         value.FontSize = 16;
-        value.FontWeight = FontWeights.SemiBold;
+        value.FontWeight = System.Windows.FontWeights.SemiBold;
         value.Foreground = _theme.Foreground;
-        value.TextTrimming = TextTrimming.CharacterEllipsis;
+        value.TextTrimming = System.Windows.TextTrimming.CharacterEllipsis;
         var label = new WpfTextBlock
         {
             Tag = labelKey,
@@ -394,16 +397,16 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             Foreground = _theme.Muted
         };
         _localizedText.Add(label);
-        var stack = new StackPanel();
+        var stack = new WpfStackPanel();
         stack.Children.Add(label);
         stack.Children.Add(value);
         return new WpfBorder
         {
             Background = _theme.Card,
             BorderBrush = _theme.Border,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
+            BorderThickness = new System.Windows.Thickness(1),
+            CornerRadius = new System.Windows.CornerRadius(8),
+            Padding = new System.Windows.Thickness(12),
             Child = stack
         };
     }
@@ -415,7 +418,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             Tag = labelKey,
             Text = UiText.Get(labelKey),
             FontSize = 15,
-            FontWeight = FontWeights.SemiBold,
+            FontWeight = System.Windows.FontWeights.SemiBold,
             Foreground = _theme.Foreground
         };
         _localizedText.Add(text);
@@ -424,11 +427,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
 
     private void ShowPage(string page)
     {
-        FrameworkElement pageContent;
-        if (!_pages.TryGetValue(page, out pageContent!))
-        {
-            return;
-        }
+        if (!_pages.TryGetValue(page, out var pageContent)) return;
         _activePage = page;
         _content.Content = pageContent;
         UpdateNavigationState();
@@ -457,9 +456,9 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         foreach (var pair in _navButtons)
         {
             var active = string.Equals(pair.Key, _activePage, StringComparison.Ordinal);
-            pair.Value.Background = active ? _theme.AccentSoft : Brushes.Transparent;
+            pair.Value.Background = active ? _theme.AccentSoft : WpfBrushes.Transparent;
             pair.Value.Foreground = active ? _theme.AccentForeground : _theme.Foreground;
-            pair.Value.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
+            pair.Value.FontWeight = active ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal;
         }
     }
 
@@ -468,17 +467,11 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         _search.ToolTip = UiText.Get("commandSearchHint");
         foreach (var button in _localizedButtons)
         {
-            if (button.Tag is string key)
-            {
-                button.Content = UiText.Get(key);
-            }
+            if (button.Tag is string key) button.Content = UiText.Get(key);
         }
         foreach (var text in _localizedText)
         {
-            if (text.Tag is string key)
-            {
-                text.Text = UiText.Get(key);
-            }
+            if (text.Tag is string key) text.Text = UiText.Get(key);
         }
         _browser.RefreshData();
         _status.Text = UiText.Get("statusReady");
@@ -487,32 +480,32 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
 
     private void OnLanguageChanged(object? sender, EventArgs e) => ApplyLanguage();
 
-    private static ScrollViewer Scroll(UIElement content) => new()
+    private static WpfScrollViewer Scroll(System.Windows.UIElement content) => new()
     {
         Content = content,
-        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+        HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled
     };
 
-    private static void AddRow(Grid grid, UIElement child, int row)
+    private static void AddRow(WpfGrid grid, System.Windows.UIElement child, int row)
     {
-        Grid.SetRow(child, row);
+        WpfGrid.SetRow(child, row);
         grid.Children.Add(child);
     }
 
     private sealed class WorkspaceTheme
     {
         private WorkspaceTheme(
-            Brush background,
-            Brush header,
-            Brush sidebar,
-            Brush card,
-            Brush input,
-            Brush border,
-            Brush foreground,
-            Brush muted,
-            Brush accentSoft,
-            Brush accentForeground)
+            WpfBrush background,
+            WpfBrush header,
+            WpfBrush sidebar,
+            WpfBrush card,
+            WpfBrush input,
+            WpfBrush border,
+            WpfBrush foreground,
+            WpfBrush muted,
+            WpfBrush accentSoft,
+            WpfBrush accentForeground)
         {
             Background = background;
             Header = header;
@@ -526,16 +519,16 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             AccentForeground = accentForeground;
         }
 
-        public Brush Background { get; }
-        public Brush Header { get; }
-        public Brush Sidebar { get; }
-        public Brush Card { get; }
-        public Brush Input { get; }
-        public Brush Border { get; }
-        public Brush Foreground { get; }
-        public Brush Muted { get; }
-        public Brush AccentSoft { get; }
-        public Brush AccentForeground { get; }
+        public WpfBrush Background { get; }
+        public WpfBrush Header { get; }
+        public WpfBrush Sidebar { get; }
+        public WpfBrush Card { get; }
+        public WpfBrush Input { get; }
+        public WpfBrush Border { get; }
+        public WpfBrush Foreground { get; }
+        public WpfBrush Muted { get; }
+        public WpfBrush AccentSoft { get; }
+        public WpfBrush AccentForeground { get; }
 
         public static WorkspaceTheme Detect()
         {
@@ -561,9 +554,9 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
                     MakeBrush("#E2F1FF"), MakeBrush("#0B5E9A"));
         }
 
-        private static Brush MakeBrush(string value)
+        private static WpfBrush MakeBrush(string value)
         {
-            var brush = (SolidColorBrush)new BrushConverter().ConvertFromString(value)!;
+            var brush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFromString(value)!;
             brush.Freeze();
             return brush;
         }
