@@ -62,6 +62,7 @@ try {
         generatedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
         signed = $false
         runtimeMatrix = @(
+            [ordered]@{ autoCAD = '2021'; targetFramework = 'net48'; managedRuntime = '.NET Framework 4.8'; apiPackage = 'AutoCAD.NET 24.0.0' },
             [ordered]@{ autoCAD = '2025-2026'; targetFramework = 'net8.0-windows'; managedRuntime = '.NET 8'; apiPackage = 'AutoCAD.NET 25.0.1' },
             [ordered]@{ autoCAD = '2027'; targetFramework = 'net10.0-windows'; managedRuntime = '.NET 10'; apiPackage = 'AutoCAD.NET 26.0.0' }
         )
@@ -113,12 +114,18 @@ try {
     $statusJson = & $statusScript -ArtifactsDirectory $destination -EvidenceDirectory $evidence -NoHostDiscovery -Json
     $status = ($statusJson -join [Environment]::NewLine) | ConvertFrom-Json
     if (@($status.generations).Count -ne 3 -or $status.allReady -ne $false) {
-        throw 'Native acceptance status must report exactly three incomplete host generations for an empty evidence directory.'
+        throw 'Native acceptance status must report exactly three incomplete default host generations for an empty evidence directory.'
     }
     foreach ($row in @($status.generations)) {
         if ($row.evidenceStatus -ne 'missing' -or $row.pending -ne $row.required -or $row.ready -ne $false) {
             throw "Unexpected empty-evidence status for AutoCAD $($row.generation)."
         }
+    }
+
+    $legacyStatusJson = & $statusScript -ArtifactsDirectory $destination -EvidenceDirectory $evidence -Generations 2021 -NoHostDiscovery -Json
+    $legacyStatus = ($legacyStatusJson -join [Environment]::NewLine) | ConvertFrom-Json
+    if (@($legacyStatus.generations).Count -ne 1 -or $legacyStatus.generations[0].generation -ne '2021' -or $legacyStatus.allReady -ne $false) {
+        throw 'Native acceptance status must support a separate incomplete AutoCAD 2021 evidence lane.'
     }
 
     $readinessJson = & $readinessScript `
