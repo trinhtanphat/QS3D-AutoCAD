@@ -57,7 +57,8 @@ foreach ($forbidden in @(
     }
 }
 
-if (-not $project.Contains('external/QS3D-Platform/src/QS3D.Platform.Parity/QS3D.Platform.Parity.csproj'.Replace('/', '\'), [StringComparison]::OrdinalIgnoreCase)) {
+$normalizedProject = $project.Replace('\', '/')
+if (-not $normalizedProject.Contains('external/QS3D-Platform/src/QS3D.Platform.Parity/QS3D.Platform.Parity.csproj', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'AutoCAD host must consume QS3D.Platform.Parity through the pinned Platform source tree.'
 }
 if (-not $gitmodules.Contains('external/QS3D-Platform', [StringComparison]::Ordinal) -or
@@ -78,7 +79,7 @@ finally {
 
 $commands = @('QS3DMEPTAKEOFF','QS3DMEPCLASH','QS3DMEPCLASHLOCATE','QS3DMEPEXACTCLASH','QS3DMEPZOOMSELECTION')
 $entries = @($manifest.ApplicationPackage.Components.ComponentEntry)
-if ($entries.Count -ne 3) { throw 'Expected exactly three AutoCAD runtime bundle entries.' }
+if ($entries.Count -ne 3) { throw "Expected exactly three AutoCAD runtime bundle entries, found $($entries.Count)." }
 foreach ($entry in $entries) {
     $globals = @($entry.Commands.Command | ForEach-Object { [string]$_.Global })
     foreach ($name in $commands) {
