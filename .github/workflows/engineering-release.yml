@@ -1,0 +1,129 @@
+name: Publish engineering AutoCAD test release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: engineering-release-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Resolve exact successful main CI
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_run') {
+            $sourceSha = '${{ github.event.workflow_run.head_sha }}'.Trim().ToLowerInvariant()
+            $ciRunId = '${{ github.event.workflow_run.id }}'.Trim()
+            $ciRunNumber = '${{ github.event.workflow_run.run_number }}'.Trim()
+          }
+          else {
+            $sourceSha = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+            $runs = gh api "repos/$env:GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=20" | ConvertFrom-Json
+            $match = @($runs.workflow_runs | Where-Object {
+              $_.head_sha.ToLowerInvariant() -eq $sourceSha -and $_.event -eq 'push' -and $_.conclusion -eq 'success'
+            }) | Select-Object -First 1
+            if ($null -eq $match) {
+              throw "No successful push CI exists for current main SHA $sourceSha."
+            }
+            $ciRunId = [string]$match.id
+            $ciRunNumber = [string]$match.run_number
+          }
+
+          if ($sourceSha -notmatch '^[0-9a-f]{40}$') { throw "Invalid source SHA: $sourceSha" }
+          if ([string]::IsNullOrWhiteSpace($ciRunId) -or [string]::IsNullOrWhiteSpace($ciRunNumber)) {
+            throw 'Unable to resolve the exact successful CI run.'
+          }
+
+          & git fetch origin main --no-tags
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to refresh origin/main.' }
+          & git merge-base --is-ancestor $sourceSha origin/main
+          if ($LASTEXITCODE -ne 0) { throw "Candidate SHA $sourceSha is not on current main." }
+
+          "SOURCE_SHA=$sourceSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CI_RUN_ID=$ciRunId" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CI_RUN_NUMBER=$ciRunNumber" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Publishing exact-main engineering candidate $sourceSha from CI #$ciRunNumber / run $ciRunId"
+
+      - name: Download exact verified CI candidate
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force artifacts -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          $artifactName = "QS3D-AutoCAD-native-candidate-$env:SOURCE_SHA"
+          gh run download $env:CI_RUN_ID --repo $env:GITHUB_REPOSITORY --name $artifactName --dir artifacts
+          if ($LASTEXITCODE -ne 0) { throw "Unable to download verified CI artifact $artifactName." }
+
+      - name: Re-verify provenance and checksums
+        shell: pwsh
+        run: |
+          ./scripts/verify-artifacts.ps1 -Version '0.0.0-ci' -ExpectedCommit $env:SOURCE_SHA
+          $manifest = Get-Content -Raw artifacts/RELEASE-PROVENANCE.json | ConvertFrom-Json
+          if ($manifest.signed -ne $false) {
+            throw 'Engineering publication expects the unsigned CI candidate; signed production release uses release.yml.'
+          }
+
+      - name: Create git tag and GitHub prerelease
+        shell: pwsh
+        run: |
+          $tag = "test-v0.1.0-ci.$env:CI_RUN_NUMBER"
+          $shortSha = $env:SOURCE_SHA.Substring(0, 8)
+          $title = "QS3D AutoCAD Test v0.1.0 — CI #$env:CI_RUN_NUMBER ($shortSha)"
+          $notes = @"
+          Engineering test build produced and verified by exact-main CI #$env:CI_RUN_NUMBER.
+
+          Source SHA: $env:SOURCE_SHA
+
+          This prerelease is for installation/runtime testing in licensed AutoCAD only. It is unsigned, is not a signed commercial release, and is not native PASS. Production publication remains gated by native acceptance plus Authenticode signing in release.yml.
+
+          Included assets: Setup.exe, portable AutoCAD bundle ZIP, RELEASE-PROVENANCE.json, and SHA256SUMS.txt.
+          "@
+          $assets = @(
+            'artifacts/QS3D-AutoCAD-0.0.0-ci-Setup.exe',
+            'artifacts/QS3D-AutoCAD-0.0.0-ci.zip',
+            'artifacts/RELEASE-PROVENANCE.json',
+            'artifacts/SHA256SUMS.txt'
+          )
+
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw "Unable to refresh existing engineering prerelease $tag." }
+          }
+          else {
+            gh release create $tag @assets `
+              --repo $env:GITHUB_REPOSITORY `
+              --target $env:SOURCE_SHA `
+              --title $title `
+              --notes $notes `
+              --prerelease
+            if ($LASTEXITCODE -ne 0) { throw "Unable to create engineering prerelease $tag." }
+          }
+
+          $tagSha = (gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha').Trim().ToLowerInvariant()
+          if ($tagSha -ne $env:SOURCE_SHA) {
+            throw "Engineering tag target mismatch: expected $env:SOURCE_SHA, got $tagSha"
+          }
+          Write-Host "Published GitHub prerelease/tag $tag at exact source SHA $env:SOURCE_SHA"
+          Write-Host 'This is an engineering test release, not a signed commercial release and not native PASS.'

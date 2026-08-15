@@ -23,10 +23,24 @@ SHA256SUMS.txt
 
 GitHub also records an immutable Actions-artifact id/digest. The QS3D provenance/checksum files remain authoritative for the candidate files themselves.
 
+## GitHub Releases test handoff
+
+After a successful push CI on `main`, `.github/workflows/engineering-release.yml` republishes the **same already-verified Actions artifact** to the repository Releases page as a GitHub prerelease. It does not rebuild, resign, or replace the candidate.
+
+Engineering release tags use the explicit test-only form:
+
+```text
+test-v0.1.0-ci.<CI-run-number>
+```
+
+The tag is created at the exact CI-tested `main` SHA. The prerelease contains the same Setup.exe, bundle ZIP, `RELEASE-PROVENANCE.json`, and `SHA256SUMS.txt`. The workflow re-runs artifact verification and refuses a provenance/source-SHA mismatch before publication.
+
+The `test-v...` prefix is intentionally outside the signed production workflow's `v*` tag namespace. A GitHub engineering prerelease remains unsigned and must never be represented as a signed commercial release or native AutoCAD PASS.
+
 ## Native test preparation
 
 1. Choose a successful `main` CI run whose exact SHA is the candidate intended for qualification.
-2. Download the artifact whose name ends with that exact 40-character SHA. Do not use an artifact from a PR run or another commit.
+2. Download either the Actions artifact whose name ends with that exact 40-character SHA or the GitHub engineering prerelease whose tag resolves to that exact SHA. Do not use a PR artifact, another commit, or mixed assets from different runs.
 3. Place the four extracted files under the repository/worktree `artifacts/` directory used by the native acceptance scripts.
 4. Verify before installation:
 
@@ -44,8 +58,8 @@ GitHub also records an immutable Actions-artifact id/digest. The QS3D provenance
 
 All three AutoCAD generations must test the same downloaded candidate. Rebuilding source, repackaging, editing the ZIP, replacing Setup.exe or mixing files from different workflow runs invalidates the evidence chain and requires new sessions.
 
-The CI artifact retention window is intentionally finite. If the required candidate has expired, run a new exact-main integration cycle and qualify the newly produced candidate rather than recreating an old artifact locally and pretending it is identical.
+The Actions artifact retention window is intentionally finite. A GitHub engineering prerelease may remain available longer, but its tag/provenance/checksums must still resolve to the exact qualified SHA. If a candidate is replaced by a newer intended qualification target, qualify the newer exact candidate instead of silently mixing versions.
 
 ## Security boundary
 
-The engineering candidate is uploaded without signing secrets/private keys. Production release signing remains fail-closed and separate. A successful artifact upload proves only that the hosted runner produced and handed off the package it already verified; licensed AutoCAD behavior must still be recorded through `docs/NATIVE-ACCEPTANCE.md` and the native evidence scripts.
+The engineering candidate and engineering GitHub prerelease are published without signing secrets/private keys. Production release signing remains fail-closed and separate. A successful artifact/release upload proves only that the hosted runner produced, verified, and handed off the exact package; licensed AutoCAD behavior must still be recorded through `docs/NATIVE-ACCEPTANCE.md` and the native evidence scripts.
