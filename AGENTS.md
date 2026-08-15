@@ -8,14 +8,15 @@ Before substantive repository work, read `docs/AGENT-WORK-REGISTRATION.md` and `
 - Permission to dispatch, diagnose, or repair CI does **not** grant a direct-to-`main` implementation exception. CI recovery work uses `recovery/<agent>/<scope>` or `agent/<agent>/<scope>`.
 - Publish a visible claim before implementation and implement only the reserved lane on `agent/<agent>/<scope>`.
 - Push the final intended task head and open/update its PR before claiming remote completion.
-- `.github/workflows/ci.yml` runs automatically for `agent/**`, `recovery/**`, `integration/**`, PRs to `main`, and `main`.
-- An agent **must not report a task completed or stop as completed until CI is `success` for the exact current branch/PR head SHA**. Old green runs, another branch, another PR or `main` do not count.
-- If CI fails, keep the task active, fix the real defect, push a new SHA and repeat the exact-SHA CI gate. Do not weaken guards/tests/security policy merely to get green.
-- For a multi-agent batch, combine participating work on `integration/<batch-id>`, require green CI for the exact integration head, resolve semantic conflicts deliberately, and perform one authorized final PR/landing to `main`.
-- Require green CI again for the exact resulting `main` SHA before reporting `ALL MERGED TO MAIN`.
+- `.github/workflows/ci.yml` runs automatically for implementation-relevant changes on `agent/**`, `recovery/**`, `integration/**`, PRs to `main`, and `main`. Docs/Markdown/non-executable housekeeping-only paths listed in `CI_POLICY.md` are intentionally excluded.
+- For any task that is not CI-neutral-only, an agent **must not report a task completed or stop as completed until CI is `success` for the exact current branch/PR head SHA**. Old green runs, another branch, another PR or `main` do not count.
+- A CI-neutral-only task may complete without full build CI only when every changed path belongs to the documented ignore set. `chore:` is not an exemption by itself; mixed/source/build/script/workflow/dependency/package changes still require CI.
+- If required CI fails, keep the task active, fix the real defect, push a new SHA and repeat the exact-SHA CI gate. Do not weaken guards/tests/security policy merely to get green.
+- For a multi-agent batch, combine participating implementation work on `integration/<batch-id>`, require green CI for the exact integration head when implementation-relevant paths changed, resolve semantic conflicts deliberately, and perform one authorized final PR/landing to `main`.
+- Require green CI again for the exact resulting `main` SHA when implementation-relevant paths changed before reporting `ALL MERGED TO MAIN`.
 - Never force-push `main`, reset it backwards, or overwrite concurrent work.
 
-A GitHub Issue is a reservation/coordination surface, not a build target; it must reference the branch/PR SHA whose CI proves the task. CI success is a quality/completion gate, not merge authorization.
+A GitHub Issue is a reservation/coordination surface, not a build target; when CI is required it must reference the branch/PR SHA whose CI proves the task. CI success is a quality/completion gate, not merge authorization. `CI_POLICY.md` is authoritative for the CI-neutral path exemption.
 
 ## AutoCAD product rules
 
