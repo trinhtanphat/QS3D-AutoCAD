@@ -6,6 +6,7 @@ $packageWorkflow = Get-Content -Raw (Join-Path $repo '.github\workflows\package-
 $packageScript = Get-Content -Raw (Join-Path $repo 'scripts\package.ps1')
 $verifyScript = Get-Content -Raw (Join-Path $repo 'scripts\verify-artifacts.ps1')
 $setupSource = Get-Content -Raw (Join-Path $repo 'installer\QS3D.Setup\Program.cs')
+$installerSmoke = Get-Content -Raw (Join-Path $repo 'scripts\test-installer-runtime.ps1')
 $commercialRoot = Join-Path $repo 'src\QS3D.Core\Commercial'
 $licensePolicyPath = Join-Path $commercialRoot 'LicensePolicy.cs'
 $updateVerifierPath = Join-Path $commercialRoot 'UpdateManifestVerifier.cs'
@@ -79,9 +80,32 @@ foreach ($requirement in @('sourceCommit', 'sourceDirty', 'RequireSigned', 'SHA2
     }
 }
 
-foreach ($requirement in @('GetProcessesByName("acad")', '.QS3D.bundle.install-', '.QS3D.bundle.backup-', 'ValidateBundle(candidate)')) {
+foreach ($requirement in @(
+    'GetProcessesByName("acad")',
+    '.QS3D.bundle.install-',
+    '.QS3D.bundle.backup-',
+    'ValidateBundle(candidate)',
+    '--log-path',
+    '--result-path',
+    'RESULT: ',
+    'ReadCompletionResult',
+    'Elevated child wrote explicit completion result',
+    'using the explicit completion result'
+)) {
     if (-not $setupSource.Contains($requirement, [StringComparison]::Ordinal)) {
-        throw "Installer safety regression: Setup is missing '$requirement'."
+        throw "Installer safety/elevation-result regression: Setup is missing '$requirement'."
+    }
+}
+
+foreach ($requirement in @(
+    '--elevated-child',
+    '--log-path',
+    '--result-path',
+    'RESULT: SUCCESS',
+    'explicit completion result'
+)) {
+    if (-not $installerSmoke.Contains($requirement, [StringComparison]::Ordinal)) {
+        throw "Installer elevation protocol smoke regression: test-installer-runtime.ps1 is missing '$requirement'."
     }
 }
 
