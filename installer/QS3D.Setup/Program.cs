@@ -29,7 +29,7 @@ static async Task<int> RunAsync(string[] args)
         return 0;
     }
 
-    var logPath = CreateLogPath();
+    var logPath = options.SharedLogPath ?? CreateLogPath();
     WriteLog(logPath, $"QS3D AutoCAD Setup started. Arguments: {string.Join(' ', args.Select(QuoteForLog))}");
 
     try
@@ -70,7 +70,7 @@ static async Task<int> RunAsync(string[] args)
             var uninstallMessage = $"QS3D AutoCAD was removed successfully.\n\nLog: {logPath}";
             Console.WriteLine(uninstallMessage);
             ShowMessage(options, "QS3D AutoCAD Setup", uninstallMessage, isError: false);
-            return 0;
+            return CompleteRun(options, logPath, 0, "QS3D AutoCAD uninstall completed successfully.");
         }
 
         await InstallAsync(destinationRoot, destination, logPath);
@@ -102,7 +102,7 @@ static async Task<int> RunAsync(string[] args)
 
         Console.WriteLine(successMessage);
         ShowMessage(options, "QS3D AutoCAD Setup", successMessage, isError: false);
-        return 0;
+        return CompleteRun(options, logPath, 0, $"QS3D AutoCAD install completed successfully at {destination}.");
     }
     catch (Exception ex)
     {
@@ -110,7 +110,7 @@ static async Task<int> RunAsync(string[] args)
         var errorMessage = $"QS3D AutoCAD installation failed.\n\n{ex.Message}\n\nDetails were written to:\n{logPath}";
         Console.Error.WriteLine(errorMessage);
         ShowMessage(options, "QS3D AutoCAD Setup - Error", errorMessage, isError: true);
-        return 1;
+        return CompleteRun(options, logPath, 1, ex.Message);
     }
 }
 
@@ -124,6 +124,8 @@ static SetupOptions ParseOptions(string[] args)
     var skipAutoCadCheck = false;
     var elevatedChild = false;
     string? installRoot = null;
+    string? sharedLogPath = null;
+    string? resultPath = null;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -161,6 +163,22 @@ static SetupOptions ParseOptions(string[] args)
 
                 installRoot = Path.GetFullPath(args[index]);
                 break;
+            case "--log-path":
+                if (++index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
+                {
+                    throw new ArgumentException("--log-path requires a file path.");
+                }
+
+                sharedLogPath = Path.GetFullPath(args[index]);
+                break;
+            case "--result-path":
+                if (++index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
+                {
+                    throw new ArgumentException("--result-path requires a file path.");
+                }
+
+                resultPath = Path.GetFullPath(args[index]);
+                break;
             default:
                 throw new ArgumentException($"Unknown setup argument: {arg}");
         }
@@ -181,6 +199,16 @@ static SetupOptions ParseOptions(string[] args)
         throw new ArgumentException("--skip-autocad-check is allowed only with --install-root for isolated test/development installs.");
     }
 
+    if ((sharedLogPath is not null || resultPath is not null) && !elevatedChild)
+    {
+        throw new ArgumentException("--log-path and --result-path are internal elevated-child arguments.");
+    }
+
+    if (elevatedChild && (sharedLogPath is null || resultPath is null))
+    {
+        throw new ArgumentException("The elevated child requires both --log-path and --result-path.");
+    }
+
     return new SetupOptions(
         Uninstall: uninstall,
         User: user,
@@ -189,7 +217,9 @@ static SetupOptions ParseOptions(string[] args)
         Help: help,
         SkipAutoCadCheck: skipAutoCadCheck,
         ElevatedChild: elevatedChild,
-        InstallRoot: installRoot);
+        InstallRoot: installRoot,
+        SharedLogPath: sharedLogPath,
+        ResultPath: resultPath);
 }
 
 static void PrintHelp()
@@ -245,6 +275,7 @@ static int RelaunchElevated(string[] originalArgs, string logPath)
         throw new InvalidOperationException("Unable to resolve the running Setup.exe path for elevation.");
     }
 
+    var resultPath = Path.Combine(Path.GetTempPath(), $"QS3D-Setup-elevated-result-{Guid.NewGuid():N}.txt");
     var startInfo = new ProcessStartInfo
     {
         FileName = executable,
@@ -258,18 +289,107 @@ static int RelaunchElevated(string[] originalArgs, string logPath)
     }
 
     startInfo.ArgumentList.Add("--elevated-child");
+    startInfo.ArgumentList.Add("--log-path");
+    startInfo.ArgumentList.Add(logPath);
+    startInfo.ArgumentList.Add("--result-path");
+    startInfo.ArgumentList.Add(resultPath);
 
     try
     {
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Windows did not start the elevated QS3D Setup process.");
         process.WaitForExit();
-        WriteLog(logPath, $"Elevated child exited with code {process.ExitCode}.");
-        return process.ExitCode;
+
+        var processExitCode = process.ExitCode;
+        var reportedExitCode = ReadCompletionResult(resultPath, logPath);
+        if (reportedExitCode.HasValue)
+        {
+            if (reportedExitCode.Value != processExitCode)
+            {
+                WriteLog(logPath, $"WARNING: elevated child process exit code {processExitCode} differed from its explicit completion result {reportedExitCode.Value}; using the explicit completion result.");
+            }
+            else
+            {
+                WriteLog(logPath, $"Elevated child completion confirmed with exit code {reportedExitCode.Value}.");
+            }
+
+            return reportedExitCode.Value;
+        }
+
+        WriteLog(logPath, $"WARNING: elevated child did not write a completion result; using process exit code {processExitCode}.");
+        return processExitCode;
     }
     catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
     {
         throw new InvalidOperationException("Administrator permission was cancelled. QS3D was not installed.", ex);
+    }
+    finally
+    {
+        try
+        {
+            File.Delete(resultPath);
+        }
+        catch
+        {
+        }
+    }
+}
+
+static int? ReadCompletionResult(string resultPath, string logPath)
+{
+    try
+    {
+        if (!File.Exists(resultPath))
+        {
+            return null;
+        }
+
+        var value = File.ReadAllText(resultPath).Trim();
+        if (int.TryParse(value, out var exitCode))
+        {
+            return exitCode;
+        }
+
+        WriteLog(logPath, $"WARNING: elevated child completion result was invalid: '{value}'.");
+    }
+    catch (Exception ex)
+    {
+        WriteLog(logPath, $"WARNING: unable to read elevated child completion result: {ex.Message}");
+    }
+
+    return null;
+}
+
+static int CompleteRun(SetupOptions options, string logPath, int exitCode, string summary)
+{
+    WriteLog(logPath, $"RESULT: {(exitCode == 0 ? "SUCCESS" : "FAILURE")} exit={exitCode}. {summary}");
+
+    if (options.ElevatedChild && options.ResultPath is not null)
+    {
+        TryWriteCompletionResult(options.ResultPath, exitCode, logPath);
+    }
+
+    return exitCode;
+}
+
+static void TryWriteCompletionResult(string resultPath, int exitCode, string logPath)
+{
+    try
+    {
+        var parent = Path.GetDirectoryName(resultPath);
+        if (!string.IsNullOrWhiteSpace(parent))
+        {
+            Directory.CreateDirectory(parent);
+        }
+
+        var temp = resultPath + ".tmp-" + Guid.NewGuid().ToString("N");
+        File.WriteAllText(temp, exitCode.ToString());
+        File.Move(temp, resultPath, overwrite: true);
+        WriteLog(logPath, $"Elevated child wrote explicit completion result {exitCode}.");
+    }
+    catch (Exception ex)
+    {
+        WriteLog(logPath, $"WARNING: unable to write elevated child completion result: {ex.Message}");
     }
 }
 
@@ -460,6 +580,12 @@ static void WriteLog(string logPath, string message)
 {
     try
     {
+        var parent = Path.GetDirectoryName(logPath);
+        if (!string.IsNullOrWhiteSpace(parent))
+        {
+            Directory.CreateDirectory(parent);
+        }
+
         File.AppendAllText(logPath, $"[{DateTimeOffset.Now:O}] {message}{Environment.NewLine}");
     }
     catch
@@ -519,7 +645,9 @@ internal sealed record SetupOptions(
     bool Help,
     bool SkipAutoCadCheck,
     bool ElevatedChild,
-    string? InstallRoot)
+    string? InstallRoot,
+    string? SharedLogPath,
+    string? ResultPath)
 {
     public bool IsAllUsers => !User && InstallRoot is null;
 }
