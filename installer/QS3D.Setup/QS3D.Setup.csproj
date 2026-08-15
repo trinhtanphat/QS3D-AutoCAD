@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <AssemblyName>QS3D-AutoCAD-Setup</AssemblyName>
     <RootNamespace>QS3D.Setup</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
