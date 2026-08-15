@@ -1,73 +1,104 @@
 # CI and integration policy
 
-This file is the repository-level source of truth for CI ownership after multi-agent work.
+This file is the repository-level source of truth for task CI, recovery and final integration.
 
 **Owner policy — 2026-08-14:** task-scoped, non-destructive CI/verification is part of the normal AI agent/chat-session completion loop. CI ownership does **not** grant release/publish authority and does **not** grant permission to write or merge `main`.
 
 Read `docs/AI-SESSION-WORKFLOW.md` and `docs/AGENT-WORK-REGISTRATION.md` together with this file.
 
-## Final-tree rule
+## Per-agent task CI
 
-CI evidence is meaningful only for the exact tree it tested. A green run for an older commit does not prove a newer branch, integration candidate or `main`.
+`.github/workflows/ci.yml` is the canonical repository-safe validation workflow. It runs for implementation-relevant changes on:
 
-Ordinary prompts such as `fix bug`, `update code`, `commit push git`, `continue all`, `implement all`, `run CI`, `fix CI` or `loop until success` never authorize a direct `main` write/merge.
+- `agent/**`;
+- `recovery/**`;
+- `integration/**`;
+- pull requests targeting `main`;
+- pushes to `main`;
+- manual dispatch when needed.
 
-Only explicit owner integration authority may change `main`, for example `merge all to main`, `you are the integration coordinator`, or `allow merge PR #... to main`.
+Every required run validates its own exact checkout SHA. Multiple agents may share the workflow definition, but each task branch has independent CI evidence.
 
-## Task-scoped CI loop
+A GitHub Issue is coordination only; it has no source tree to build. CI evidence belongs to the branch/PR SHA referenced by the issue.
 
-A session that owns a registered lane may run/observe/retry applicable non-destructive CI/checks for its agent/recovery branch, PR or authorized integration candidate.
+## CI-neutral-only exemption
 
-When CI is red:
+The full build/test workflow is intentionally skipped only when **all** changed paths are limited to the ignore set configured in `.github/workflows/ci.yml`, including documentation/Markdown and non-executable housekeeping such as `.gitignore`, `.gitattributes`, `.editorconfig`, license/notice files and issue/PR templates.
+
+This exemption is path-based, not commit-message-based. A `docs:` or `chore:` commit still requires normal CI when it touches source, tests, project/build files, dependencies, scripts, workflows, installer, packaging, signing/runtime-affecting configuration, release machinery or any other non-ignored path. Mixed changes always require normal CI.
+
+For CI-neutral-only work, record the path classification and any relevant lightweight validation instead of manufacturing an unrelated build/release run.
+
+## Mandatory exact-head completion gate
+
+For any task that is not CI-neutral-only, an implementation agent must not report the task complete until the required CI run for the **exact current branch/PR head SHA** has conclusion `success`.
+
+A green run for an older SHA, another branch, another PR, an older integration candidate or `main` does not count. Any new implementation-relevant task commit invalidates earlier green evidence for completion.
+
+If CI fails, keep the task active and continue:
 
 1. identify the exact failing run/check and exact tested SHA;
 2. inspect the failing job/step/log and diagnose root cause against current source;
 3. fix on `agent/<agent>/<scope>` or `recovery/<agent>/<scope>`, never directly on `main`;
 4. add/retain deterministic regression coverage when appropriate;
-5. commit and push;
+5. commit and push a new SHA;
 6. run/observe a fresh relevant attempt;
-7. repeat from the newest failure until all required/applicable lane checks are green.
+7. repeat from the newest failure until all required/applicable checks are green.
 
 Never weaken tests, architecture guards, security checks, packaging/release gates or expected behavior merely to obtain green CI.
 
-For docs-only changes, intentionally skipped code/release jobs are acceptable when no applicable docs CI exists. Record what did and did not run; do not manufacture a release run solely for documentation.
+## Main authorization boundary
+
+Ordinary prompts such as `fix bug`, `update code`, `commit push git`, `continue all`, `implement all`, `run CI`, `fix CI` or `loop until success` never authorize a direct `main` write/merge.
+
+Only explicit owner integration authority may change `main`, for example `merge all to main`, `you are the integration coordinator`, or `allow merge PR #... to main`.
+
+CI success is a quality/completion gate, not merge authorization.
 
 ## Canonical progression
 
-For an ordinary session without `main` authority:
+For implementation-relevant changes owned by an ordinary session:
 
 ```text
 CLAIM_ISSUE_OR_PR_VISIBLE
-  -> AGENT_BRANCH_READY
-  -> BRANCH/PR_VALIDATION
-  -> CI_GREEN_FOR_LANE
+  -> AGENT/RECOVERY_BRANCH
+  -> EXACT-HEAD CI
+  -> CI_GREEN
+  -> PR/HANDOFF READY
   -> READY_FOR_INTEGRATION
 ```
 
-If the owner later authorizes integration:
+When the owner authorizes integration:
 
 ```text
 READY_LANES
   -> INTEGRATION_BRANCH
-  -> INTEGRATION_REVIEW
-  -> ONE_AUTHORIZED_FINAL_MERGE_TO_MAIN
+  -> EXACT-INTEGRATION CI
+  -> CI_GREEN
+  -> INTEGRATION REVIEW
+  -> ONE_AUTHORIZED FINAL MERGE TO MAIN
   -> EXACT-CURRENT-MAIN CI
   -> CI_GREEN
   -> ALL_DONE
 ```
 
-A session may finish its assigned lane at `READY_FOR_INTEGRATION` when the prompt did not authorize `main`, provided the implementation is complete, no known in-scope defect remains, required/applicable validation is green and handoff is self-contained. It must report `MERGED TO MAIN: NO`.
+CI-neutral-only work follows the same branch/PR authorization path without manufacturing a full build-CI requirement.
 
-## CI recovery remains off main
+## Integration and recovery
 
-CI authorization is not direct-main authorization. A CI operator fixes failures on an agent/recovery branch and follows the normal PR/integration path.
+An authorized integration coordinator must refresh current `main`, enumerate exact participating claims/SHAs, combine every required lane, deliberately resolve semantic conflicts, verify no required implementation remains only on another branch/PR, run combined validation, inspect for accidental reversions/duplicate competing implementations, freeze the candidate and only then perform the authorized final landing.
 
-An authorized integration coordinator must refresh current `main`, combine all required lanes, deliberately resolve conflicts, run combined validation, inspect for accidental reversions/duplicate implementations, freeze the candidate, perform the explicitly authorized final landing, refresh `main`, record the exact final SHA and continue exact-current-main CI recovery until green.
+If integration or exact-current-main CI is red, recovery remains off `main`: diagnose the exact failure, repair on `recovery/<agent>/<scope>` or an integration recovery branch, fold the repair into the current candidate, and repeat from the newest relevant SHA until green.
 
-## Evidence boundaries
+Never force-push `main`, reset it backwards or use stale CI as proof of the current tree.
 
-- Source/Core CI is not native AutoCAD runtime proof.
-- Native AutoCAD qualification, installer execution, signing and licensed-host evidence remain separate when required.
+## Release/native boundary
+
+Repository CI proves source/build/test/package contracts only. It is not licensed native AutoCAD runtime proof.
+
+- Native AutoCAD 2025/2026/2027 qualification remains separate when required.
+- Authenticode production signing and real commercial credentials/services remain separate release gates.
+- Engineering package artifacts are not production/native PASS without their exact acceptance evidence.
 - Unavailable native/local evidence must never be claimed as PASS.
 
 ## Completion/session-close gate
@@ -83,4 +114,6 @@ If required/applicable CI is red and actionable work remains, continue diagnose 
 
 ## GitHub protection
 
-Repository policy should be backed by branch protection/rulesets for `main` when available: require the intended PR/integration path, block force-push and branch deletion, and require appropriate status checks. Markdown policy does not itself configure those repository settings.
+Repository policy should be backed by branch protection/rulesets for `main` when available: require the intended PR/integration path, block force-push and deletion, and require stable implementation status checks such as `CI / core-host-and-guards` where appropriate. If docs-only PRs are exempt from full CI, rulesets should account for that rather than forcing unrelated build work.
+
+Markdown policy does not itself configure repository settings.
