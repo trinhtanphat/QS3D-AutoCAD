@@ -2,17 +2,49 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "agent/**"
+      - "recovery/**"
+      - "integration/**"
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".gitignore"
+      - ".gitattributes"
+      - ".editorconfig"
+      - "LICENSE*"
+      - "NOTICE*"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE*"
+      - ".github/PULL_REQUEST_TEMPLATE/**"
   pull_request:
-    branches: [main]
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".gitignore"
+      - ".gitattributes"
+      - ".editorconfig"
+      - "LICENSE*"
+      - "NOTICE*"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE*"
+      - ".github/PULL_REQUEST_TEMPLATE/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   core-host-and-guards:
     runs-on: windows-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
