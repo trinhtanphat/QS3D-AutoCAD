@@ -36,6 +36,11 @@
         <Command Global="QS3DREFERENCEDELETE" Local="QS3DREFERENCEDELETE" />
         <Command Global="QS3DGRIDARRAY" Local="QS3DGRIDARRAY" />
         <Command Global="QS3DREFERENCES" Local="QS3DREFERENCES" />
+        <Command Global="QS3DMEPTAKEOFF" Local="QS3DMEPTAKEOFF" />
+        <Command Global="QS3DMEPCLASH" Local="QS3DMEPCLASH" />
+        <Command Global="QS3DMEPCLASHLOCATE" Local="QS3DMEPCLASHLOCATE" />
+        <Command Global="QS3DMEPEXACTCLASH" Local="QS3DMEPEXACTCLASH" />
+        <Command Global="QS3DMEPZOOMSELECTION" Local="QS3DMEPZOOMSELECTION" />
       </Commands>
     </ComponentEntry>
   </Components>
@@ -74,6 +79,11 @@
         <Command Global="QS3DREFERENCEDELETE" Local="QS3DREFERENCEDELETE" />
         <Command Global="QS3DGRIDARRAY" Local="QS3DGRIDARRAY" />
         <Command Global="QS3DREFERENCES" Local="QS3DREFERENCES" />
+        <Command Global="QS3DMEPTAKEOFF" Local="QS3DMEPTAKEOFF" />
+        <Command Global="QS3DMEPCLASH" Local="QS3DMEPCLASH" />
+        <Command Global="QS3DMEPCLASHLOCATE" Local="QS3DMEPCLASHLOCATE" />
+        <Command Global="QS3DMEPEXACTCLASH" Local="QS3DMEPEXACTCLASH" />
+        <Command Global="QS3DMEPZOOMSELECTION" Local="QS3DMEPZOOMSELECTION" />
       </Commands>
     </ComponentEntry>
   </Components>
@@ -112,6 +122,11 @@
         <Command Global="QS3DREFERENCEDELETE" Local="QS3DREFERENCEDELETE" />
         <Command Global="QS3DGRIDARRAY" Local="QS3DGRIDARRAY" />
         <Command Global="QS3DREFERENCES" Local="QS3DREFERENCES" />
+        <Command Global="QS3DMEPTAKEOFF" Local="QS3DMEPTAKEOFF" />
+        <Command Global="QS3DMEPCLASH" Local="QS3DMEPCLASH" />
+        <Command Global="QS3DMEPCLASHLOCATE" Local="QS3DMEPCLASHLOCATE" />
+        <Command Global="QS3DMEPEXACTCLASH" Local="QS3DMEPEXACTCLASH" />
+        <Command Global="QS3DMEPZOOMSELECTION" Local="QS3DMEPZOOMSELECTION" />
       </Commands>
     </ComponentEntry>
   </Components>
