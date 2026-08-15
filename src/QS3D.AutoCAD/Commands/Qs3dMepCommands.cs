@@ -23,15 +23,13 @@ public sealed class Qs3dMepCommands
         var document = Application.DocumentManager.MdiActiveDocument;
         if (document is null) return;
         var editor = document.Editor;
-
         try
         {
-            if (!TryGetMetersPerUnit(document.Database, out var metersPerUnit, out var unitError))
+            if (!TryGetMetersPerUnit(document.Database, out var metersPerUnit, out var error))
             {
-                editor.WriteMessage("\nQS3DMEPTAKEOFF: " + unitError + "\n");
+                editor.WriteMessage("\nQS3DMEPTAKEOFF: " + error + "\n");
                 return;
             }
-
             var ids = GetImpliedSelection(editor);
             if (ids.Count == 0)
             {
@@ -54,17 +52,20 @@ public sealed class Qs3dMepCommands
                             skipped++;
                             continue;
                         }
-
                         var lengthM = TryGetCurveLength(entity, out var length) ? length * metersPerUnit : 0d;
                         var areaM2 = TryGetArea(entity, out var area) ? area * metersPerUnit * metersPerUnit : 0d;
                         var volumeM3 = TryGetVolume(entity, out var volume) ? volume * metersPerUnit * metersPerUnit * metersPerUnit : 0d;
-                        var system = CanonicalOrFallback(entity.Layer, recognition.Category ?? recognition.MepKind.Value.ToString());
-                        var specification = Specification(transaction, entity);
+                        if (!FiniteNonNegative(lengthM) || !FiniteNonNegative(areaM2) || !FiniteNonNegative(volumeM3))
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        var category = recognition.Category ?? recognition.MepKind.Value.ToString();
                         captured.Add(new MepElement(
                             entity.Handle.ToString(),
                             recognition.MepKind.Value,
-                            system,
-                            specification,
+                            CanonicalOrFallback(entity.Layer, category),
+                            Specification(transaction, entity),
                             DefaultRegion,
                             1,
                             lengthM,
@@ -84,15 +85,13 @@ public sealed class Qs3dMepCommands
                 editor.WriteMessage("\nQS3DMEPTAKEOFF: no unambiguous MEP entity was recognized; unknown/ambiguous entities were skipped.\n");
                 return;
             }
-
             var rows = new MepQuantityService().Aggregate(captured);
             editor.WriteMessage("\nQS3DMEPTAKEOFF: recognized=" + captured.Count + " groups=" + rows.Count + " skipped=" + skipped + ".\n");
             foreach (var row in rows)
             {
                 editor.WriteMessage(
                     "  " + row.Region + " | " + row.System + " | " + row.Specification + " | " + row.Kind +
-                    " | entities=" + row.ElementCount +
-                    " count=" + row.QuantityCount +
+                    " | entities=" + row.ElementCount + " count=" + row.QuantityCount +
                     " L=" + row.LengthM.ToString("0.###", CultureInfo.InvariantCulture) + " m" +
                     " A=" + row.AreaM2.ToString("0.###", CultureInfo.InvariantCulture) + " m2" +
                     " V=" + row.VolumeM3.ToString("0.###", CultureInfo.InvariantCulture) + " m3\n");
@@ -110,12 +109,11 @@ public sealed class Qs3dMepCommands
         var document = Application.DocumentManager.MdiActiveDocument;
         if (document is null) return;
         var editor = document.Editor;
-
         try
         {
-            if (!TryGetMetersPerUnit(document.Database, out var metersPerUnit, out var unitError))
+            if (!TryGetMetersPerUnit(document.Database, out var metersPerUnit, out var error))
             {
-                editor.WriteMessage("\nQS3DMEPCLASH: " + unitError + "\n");
+                editor.WriteMessage("\nQS3DMEPCLASH: " + error + "\n");
                 return;
             }
             var ids = GetImpliedSelection(editor);
@@ -125,15 +123,19 @@ public sealed class Qs3dMepCommands
                 return;
             }
             if (!TryPromptClearance(editor, out var clearanceDrawingUnits)) return;
-
             var candidates = ReadCoordination(document.Database, ids, metersPerUnit, out var skipped);
             if (candidates.Count < 2)
             {
                 editor.WriteMessage("\nQS3DMEPCLASH: fewer than two recognized entities with valid extents; skipped=" + skipped + ".\n");
                 return;
             }
-
-            var clashes = DetectRelevant(candidates, clearanceDrawingUnits * metersPerUnit);
+            var clearanceM = clearanceDrawingUnits * metersPerUnit;
+            if (!FiniteNonNegative(clearanceM))
+            {
+                editor.WriteMessage("\nQS3DMEPCLASH: clearance overflow after unit conversion.\n");
+                return;
+            }
+            var clashes = DetectRelevant(candidates, clearanceM);
             editor.WriteMessage("\nQS3DMEPCLASH: candidates=" + candidates.Count + " clashes=" + clashes.Count + " skipped=" + skipped + ".\n");
             for (var i = 0; i < clashes.Count; i++) WriteClash(editor, clashes[i], null);
         }
@@ -149,12 +151,11 @@ public sealed class Qs3dMepCommands
         var document = Application.DocumentManager.MdiActiveDocument;
         if (document is null) return;
         var editor = document.Editor;
-
         try
         {
-            if (!TryGetMetersPerUnit(document.Database, out var metersPerUnit, out var unitError))
+            if (!TryGetMetersPerUnit(document.Database, out var metersPerUnit, out var error))
             {
-                editor.WriteMessage("\nQS3DMEPCLASHLOCATE: " + unitError + "\n");
+                editor.WriteMessage("\nQS3DMEPCLASHLOCATE: " + error + "\n");
                 return;
             }
             var ids = GetImpliedSelection(editor);
@@ -164,19 +165,18 @@ public sealed class Qs3dMepCommands
                 return;
             }
             if (!TryPromptClearance(editor, out var clearanceDrawingUnits)) return;
-
+            var clearanceM = clearanceDrawingUnits * metersPerUnit;
+            if (!FiniteNonNegative(clearanceM)) return;
             var candidates = ReadCoordination(document.Database, ids, metersPerUnit, out var skipped);
-            var clashes = DetectRelevant(candidates, clearanceDrawingUnits * metersPerUnit);
+            var clashes = DetectRelevant(candidates, clearanceM);
             if (clashes.Count == 0)
             {
                 editor.WriteMessage("\nQS3DMEPCLASHLOCATE: no relevant clash found; skipped=" + skipped + ".\n");
                 return;
             }
-
             var reviewCount = Math.Min(clashes.Count, MaxLocatePairs);
             editor.WriteMessage("\nQS3DMEPCLASHLOCATE: clashes=" + clashes.Count + " review=" + reviewCount + ".\n");
             for (var i = 0; i < reviewCount; i++) WriteClash(editor, clashes[i], i + 1);
-
             var options = new PromptIntegerOptions("\nClash number to locate [1-" + reviewCount.ToString(CultureInfo.InvariantCulture) + "]: ")
             {
                 AllowNegative = false,
@@ -187,7 +187,6 @@ public sealed class Qs3dMepCommands
             };
             var selected = editor.GetInteger(options);
             if (selected.Status != PromptStatus.OK) return;
-
             var clash = clashes[selected.Value - 1];
             if (!TryResolvePair(document.Database, clash.LeftElementId, clash.RightElementId, out var pair))
             {
@@ -209,7 +208,6 @@ public sealed class Qs3dMepCommands
         var document = Application.DocumentManager.MdiActiveDocument;
         if (document is null) return;
         var editor = document.Editor;
-
         try
         {
             var ids = GetImpliedSelection(editor);
@@ -218,7 +216,6 @@ public sealed class Qs3dMepCommands
                 editor.WriteMessage("\nQS3DMEPEXACTCLASH: select at least two recognized Solid3d entities.\n");
                 return;
             }
-
             var pairs = new List<ExactPair>();
             var skipped = 0;
             var broadPairs = 0;
@@ -250,7 +247,6 @@ public sealed class Qs3dMepCommands
                         skipped++;
                     }
                 }
-
                 candidates.Sort(static (left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Handle, right.Handle));
                 for (var i = 0; i < candidates.Count; i++)
                 {
@@ -275,7 +271,6 @@ public sealed class Qs3dMepCommands
                 }
                 transaction.Commit();
             }
-
             editor.WriteMessage("\nQS3DMEPEXACTCLASH: broad-phase=" + broadPairs + " exact=" + pairs.Count + " skipped=" + skipped + ".\n");
             foreach (var pair in pairs) editor.WriteMessage("  ExactHard | " + pair.Left + " <-> " + pair.Right + "\n");
         }
@@ -291,7 +286,6 @@ public sealed class Qs3dMepCommands
         var document = Application.DocumentManager.MdiActiveDocument;
         if (document is null) return;
         var editor = document.Editor;
-
         try
         {
             var ids = GetImpliedSelection(editor);
@@ -300,7 +294,6 @@ public sealed class Qs3dMepCommands
                 editor.WriteMessage("\nQS3DMEPZOOMSELECTION: select at least one live entity.\n");
                 return;
             }
-
             var corners = new List<Point3d>();
             using (var transaction = document.Database.TransactionManager.StartOpenCloseTransaction())
             {
@@ -325,13 +318,11 @@ public sealed class Qs3dMepCommands
                 editor.WriteMessage("\nQS3DMEPZOOMSELECTION: selected entities do not expose usable geometric extents.\n");
                 return;
             }
-
             using var view = editor.GetCurrentView();
             var worldToDcs = Matrix3d.PlaneToWorld(view.ViewDirection);
             worldToDcs = Matrix3d.Displacement(view.Target - Point3d.Origin) * worldToDcs;
             worldToDcs = Matrix3d.Rotation(-view.ViewTwist, view.ViewDirection, view.Target) * worldToDcs;
             worldToDcs = worldToDcs.Inverse();
-
             var first = corners[0].TransformBy(worldToDcs);
             var minX = first.X;
             var maxX = first.X;
@@ -345,7 +336,6 @@ public sealed class Qs3dMepCommands
                 minY = Math.Min(minY, point.Y);
                 maxY = Math.Max(maxY, point.Y);
             }
-
             var width = Math.Max(maxX - minX, 1e-9);
             var height = Math.Max(maxY - minY, 1e-9);
             var aspect = view.Width > 0d && view.Height > 0d ? view.Width / view.Height : 1d;
@@ -366,9 +356,7 @@ public sealed class Qs3dMepCommands
     private static IReadOnlyList<ObjectId> GetImpliedSelection(Editor editor)
     {
         var result = editor.SelectImplied();
-        return result.Status == PromptStatus.OK && result.Value is not null
-            ? result.Value.GetObjectIds()
-            : Array.Empty<ObjectId>();
+        return result.Status == PromptStatus.OK && result.Value is not null ? result.Value.GetObjectIds() : Array.Empty<ObjectId>();
     }
 
     private static bool TryPromptClearance(Editor editor, out double clearance)
@@ -407,13 +395,16 @@ public sealed class Qs3dMepCommands
                         skipped++;
                         continue;
                     }
-                    var bounds = new AxisAlignedBox(
-                        extents.MinPoint.X * metersPerUnit,
-                        extents.MinPoint.Y * metersPerUnit,
-                        extents.MinPoint.Z * metersPerUnit,
-                        extents.MaxPoint.X * metersPerUnit,
-                        extents.MaxPoint.Y * metersPerUnit,
-                        extents.MaxPoint.Z * metersPerUnit);
+                    if (!TryScale(extents.MinPoint.X, metersPerUnit, out var minX) ||
+                        !TryScale(extents.MinPoint.Y, metersPerUnit, out var minY) ||
+                        !TryScale(extents.MinPoint.Z, metersPerUnit, out var minZ) ||
+                        !TryScale(extents.MaxPoint.X, metersPerUnit, out var maxX) ||
+                        !TryScale(extents.MaxPoint.Y, metersPerUnit, out var maxY) ||
+                        !TryScale(extents.MaxPoint.Z, metersPerUnit, out var maxZ))
+                    {
+                        skipped++;
+                        continue;
+                    }
                     var category = recognition.Category!;
                     result.Add(new CoordinationElement(
                         entity.Handle.ToString(),
@@ -421,7 +412,7 @@ public sealed class Qs3dMepCommands
                         category,
                         CanonicalOrFallback(entity.Layer, category),
                         DefaultRegion,
-                        bounds));
+                        new AxisAlignedBox(minX, minY, minZ, maxX, maxY, maxZ)));
                 }
                 catch (System.Exception ex) when (IsRecoverableEntityFailure(ex))
                 {
@@ -437,11 +428,11 @@ public sealed class Qs3dMepCommands
     private static IReadOnlyList<ClashResult> DetectRelevant(IReadOnlyList<CoordinationElement> candidates, double clearanceM)
     {
         var disciplines = candidates.ToDictionary(static item => item.ElementId, static item => item.Discipline, StringComparer.OrdinalIgnoreCase);
-        var detected = new ClashDetectionService().Detect(candidates, clearanceM, includeSameDiscipline: true);
-        var relevant = detected.Where(item =>
-            (disciplines.TryGetValue(item.LeftElementId, out var left) && left == MepDiscipline.Mep) ||
-            (disciplines.TryGetValue(item.RightElementId, out var right) && right == MepDiscipline.Mep)).ToArray();
-        return relevant;
+        return new ClashDetectionService().Detect(candidates, clearanceM, includeSameDiscipline: true)
+            .Where(item =>
+                (disciplines.TryGetValue(item.LeftElementId, out var left) && left == MepDiscipline.Mep) ||
+                (disciplines.TryGetValue(item.RightElementId, out var right) && right == MepDiscipline.Mep))
+            .ToArray();
     }
 
     private static void WriteClash(Editor editor, ClashResult clash, int? index)
@@ -515,7 +506,7 @@ public sealed class Qs3dMepCommands
                 case Circle circle:
                     value = Math.PI * circle.Radius * circle.Radius;
                     break;
-                case Region region:
+                case Autodesk.AutoCAD.DatabaseServices.Region region:
                     value = region.Area;
                     break;
                 default:
@@ -576,7 +567,7 @@ public sealed class Qs3dMepCommands
             24 => 6336000d / 3937d,
             _ => 0d
         };
-        if (metersPerUnit > 0d && double.IsFinite(metersPerUnit))
+        if (metersPerUnit > 0d && IsFinite(metersPerUnit))
         {
             error = string.Empty;
             return true;
@@ -588,8 +579,7 @@ public sealed class Qs3dMepCommands
     private static bool TryResolvePair(Database database, string left, string right, out ObjectId[] ids)
     {
         ids = Array.Empty<ObjectId>();
-        if (!TryResolveHandle(database, left, out var leftId) || !TryResolveHandle(database, right, out var rightId) || leftId == rightId)
-            return false;
+        if (!TryResolveHandle(database, left, out var leftId) || !TryResolveHandle(database, right, out var rightId) || leftId == rightId) return false;
         try
         {
             using var transaction = database.TransactionManager.StartOpenCloseTransaction();
@@ -623,8 +613,8 @@ public sealed class Qs3dMepCommands
     }
 
     private static bool FiniteExtents(Extents3d extents) =>
-        double.IsFinite(extents.MinPoint.X) && double.IsFinite(extents.MinPoint.Y) && double.IsFinite(extents.MinPoint.Z) &&
-        double.IsFinite(extents.MaxPoint.X) && double.IsFinite(extents.MaxPoint.Y) && double.IsFinite(extents.MaxPoint.Z) &&
+        IsFinite(extents.MinPoint.X) && IsFinite(extents.MinPoint.Y) && IsFinite(extents.MinPoint.Z) &&
+        IsFinite(extents.MaxPoint.X) && IsFinite(extents.MaxPoint.Y) && IsFinite(extents.MaxPoint.Z) &&
         extents.MaxPoint.X >= extents.MinPoint.X && extents.MaxPoint.Y >= extents.MinPoint.Y && extents.MaxPoint.Z >= extents.MinPoint.Z;
 
     private static bool ExtentsIntersect(Extents3d left, Extents3d right) =>
@@ -646,7 +636,14 @@ public sealed class Qs3dMepCommands
         result.Add(new Point3d(max.X, max.Y, max.Z));
     }
 
-    private static bool FiniteNonNegative(double value) => double.IsFinite(value) && value >= 0d;
+    private static bool TryScale(double value, double factor, out double result)
+    {
+        result = value * factor;
+        return IsFinite(result);
+    }
+
+    private static bool IsFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+    private static bool FiniteNonNegative(double value) => IsFinite(value) && value >= 0d;
 
     private static string CanonicalOrFallback(string? value, string fallback)
     {
