@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
+using QS3D.AutoCAD;
 using QS3D.Platform.Parity;
 
 namespace QS3D.AutoCAD.Commands;
@@ -15,7 +16,6 @@ public sealed class Qs3dMepCommands
     private const int MaxLocatePairs = 200;
     private const int MaxExactSolids = 500;
     private const int MaxExactPairs = 100000;
-    private static readonly MepRecognitionProfile RecognitionProfile = MepRecognitionProfiles.CreateDefault();
 
     [CommandMethod("QS3DMEPTAKEOFF", CommandFlags.UsePickSet)]
     public void Takeoff()
@@ -457,7 +457,7 @@ public sealed class Qs3dMepCommands
             {
             }
         }
-        recognition = RecognitionProfile.Recognize(entity.Layer, blockName);
+        recognition = MepRecognitionProfileProvider.Current.Recognize(entity.Layer, blockName);
         return recognition.Status == MepRecognitionStatus.Matched;
     }
 

@@ -85,6 +85,9 @@ jobs:
       - name: Cubicost MEP shared-parity guard
         shell: pwsh
         run: ./scripts/validate-cubicost-mep-parity.ps1
+      - name: Cubicost MEP review/profile guard
+        shell: pwsh
+        run: ./scripts/validate-cubicost-mep-review-profile.ps1
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1

@@ -41,6 +41,7 @@
         <Command Global="QS3DMEPCLASHLOCATE" Local="QS3DMEPCLASHLOCATE" />
         <Command Global="QS3DMEPEXACTCLASH" Local="QS3DMEPEXACTCLASH" />
         <Command Global="QS3DMEPZOOMSELECTION" Local="QS3DMEPZOOMSELECTION" />
+        <Command Global="QS3DMEPREVIEW" Local="QS3DMEPREVIEW" />
       </Commands>
     </ComponentEntry>
   </Components>
@@ -84,6 +85,7 @@
         <Command Global="QS3DMEPCLASHLOCATE" Local="QS3DMEPCLASHLOCATE" />
         <Command Global="QS3DMEPEXACTCLASH" Local="QS3DMEPEXACTCLASH" />
         <Command Global="QS3DMEPZOOMSELECTION" Local="QS3DMEPZOOMSELECTION" />
+        <Command Global="QS3DMEPREVIEW" Local="QS3DMEPREVIEW" />
       </Commands>
     </ComponentEntry>
   </Components>
@@ -127,6 +129,7 @@
         <Command Global="QS3DMEPCLASHLOCATE" Local="QS3DMEPCLASHLOCATE" />
         <Command Global="QS3DMEPEXACTCLASH" Local="QS3DMEPEXACTCLASH" />
         <Command Global="QS3DMEPZOOMSELECTION" Local="QS3DMEPZOOMSELECTION" />
+        <Command Global="QS3DMEPREVIEW" Local="QS3DMEPREVIEW" />
       </Commands>
     </ComponentEntry>
   </Components>
