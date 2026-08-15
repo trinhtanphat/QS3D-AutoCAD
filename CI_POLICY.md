@@ -2,46 +2,59 @@
 
 This file is the repository-level source of truth for CI ownership after multi-agent work.
 
-## Final-tree rule
+## Per-agent task CI
 
-CI evidence is meaningful only for the exact tree it tested. A green run for an older commit does not prove a newer `main`.
+`.github/workflows/ci.yml` is the canonical automatic task-validation workflow. It runs on pushes to `agent/**`, `recovery/**`, `integration/**`, pull requests targeting `main`, pushes to `main`, and manual dispatch.
+
+Multiple agents share the workflow definition but every run validates its own exact branch/PR head SHA. Ten independent task branches therefore have ten independent CI results.
+
+A GitHub Issue is coordination only; it has no source tree to build. CI evidence belongs to the branch/PR SHA referenced by the Issue.
+
+## Mandatory completion gate
+
+An implementation agent must not report a task completed or stop as completed until the required CI run for the **exact current branch/PR head SHA** has conclusion `success`.
+
+A green run for an older SHA, another branch, another PR, or `main` does not count. Any new task commit invalidates earlier green evidence for completion.
+
+If CI fails, keep the lane active, fix the real defect on `agent/<agent>/<scope>` or `recovery/<agent>/<scope>`, push a new SHA and repeat. Never weaken architecture, release-security, packaging, compatibility or test guards merely to obtain green status.
+
+Native AutoCAD runtime evidence that cannot be proven by repository-safe CI remains an explicit environment gate; remote CI success must never be relabeled as native PASS.
+
+## Final-tree rule
 
 Canonical progression:
 
 ```text
 CLAIM_VISIBLE
-  -> AGENT_BRANCHES_READY
+  -> AGENT_BRANCH
+  -> EXACT-HEAD CI
+  -> CI_GREEN
+  -> PR_READY
   -> INTEGRATION_BRANCH
-  -> INTEGRATION_REVIEW
-  -> ONE_FINAL_MERGE_TO_MAIN
+  -> EXACT-INTEGRATION CI
+  -> CI_GREEN
+  -> ONE_AUTHORIZED_MERGE_TO_MAIN
   -> EXACT-MAIN CI
   -> CI_GREEN
   -> ALL_DONE
 ```
 
-Normal implementation agents do not land implementation directly to `main`. The same rule applies to an agent/session designated to run or repair CI.
+CI success is a completion/quality gate, not direct-main authorization.
 
-## CI recovery
+## Integration
 
-When CI is red:
+For a multi-agent batch, combine participating work on `integration/<batch-id>`, require green CI for the exact integration head, then perform the reviewed authorized landing. Require green CI again for the exact resulting `main` SHA before reporting `ALL MERGED TO MAIN`.
 
-1. identify the exact failing run and exact tested SHA;
-2. diagnose the root cause against current source rather than changing expectations merely to silence a test;
-3. reserve the repair lane if it is not already owned;
-4. implement the repair on `recovery/<agent>/<scope>` or `agent/<agent>/<scope>`;
-5. add/retain deterministic regression coverage;
-6. integrate the repair into the current `integration/<batch-id>` candidate or a dedicated recovery integration branch;
-7. refresh current `main`, perform one reviewed final landing, and run/observe CI for that new exact tree;
-8. repeat only from the newest relevant failure until the current candidate is green.
+## Release/native boundary
 
-**CI authorization is not direct-main authorization.** Do not commit/push source, tests, scripts, workflows, packaging or release fixes straight to `main` merely because the session owns the CI loop.
+Release and native-package workflows are not substitutes for per-agent task CI. Keep publication/signing/native qualification semantics separate from ordinary branch/PR validation. Use `.github/workflows/ci.yml` as the mandatory task-completion evidence unless the task explicitly requires an additional licensed/native gate.
 
 ## Evidence boundaries
 
-- Source/Core CI is not native AutoCAD runtime proof.
+- Source/Core/host build CI is not licensed native AutoCAD runtime proof.
 - Native AutoCAD qualification, installer execution, signing and licensed-host evidence remain separate when required.
-- Never weaken a product/architecture/security/release guard solely to obtain a green result.
+- Do not promote engineering package artifacts to production/native PASS without their exact acceptance evidence.
 
 ## GitHub protection
 
-Repository policy should be backed by GitHub branch protection/rulesets for `main` when available: require the intended PR/integration path, block force-push and branch deletion, and require appropriate status checks. Repository Markdown cannot itself configure those GitHub settings.
+Repository settings should require the stable `QS3D AutoCAD CI / core-host-and-guards` status for PRs to `main`, require the intended PR/integration path, block force-push and branch deletion, and keep bypass narrow.
