@@ -59,12 +59,15 @@ $manifest = Join-Path $stage 'PackageContents.xml'
 $xml.ApplicationPackage.AppVersion = $Version
 $xml.Save($manifest)
 
+dotnet build $project -c Release -f net48 "-p:Version=$Version"
+if ($LASTEXITCODE -ne 0) { throw 'AutoCAD 2021 host build failed.' }
 dotnet build $project -c Release -f net8.0-windows "-p:Version=$Version"
 if ($LASTEXITCODE -ne 0) { throw 'AutoCAD 2025-2026 host build failed.' }
 dotnet build $project -c Release -f net10.0-windows "-p:Version=$Version"
 if ($LASTEXITCODE -ne 0) { throw 'AutoCAD 2027 host build failed.' }
 
 $payloads = @(
+    @{ Framework = 'net48'; Folder = '2021'; AutoCAD = '2021'; Runtime = '.NET Framework 4.8' },
     @{ Framework = 'net8.0-windows'; Folder = '2025-2026'; AutoCAD = '2025-2026'; Runtime = '.NET 8' },
     @{ Framework = 'net10.0-windows'; Folder = '2027'; AutoCAD = '2027'; Runtime = '.NET 10' }
 )
@@ -130,6 +133,7 @@ $provenanceObject = [ordered]@{
     generatedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
     signed = [bool]$signingEnabled
     runtimeMatrix = @(
+        [ordered]@{ autoCAD = '2021'; targetFramework = 'net48'; managedRuntime = '.NET Framework 4.8'; apiPackage = 'AutoCAD.NET 24.0.0' },
         [ordered]@{ autoCAD = '2025-2026'; targetFramework = 'net8.0-windows'; managedRuntime = '.NET 8'; apiPackage = 'AutoCAD.NET 25.0.1' },
         [ordered]@{ autoCAD = '2027'; targetFramework = 'net10.0-windows'; managedRuntime = '.NET 10'; apiPackage = 'AutoCAD.NET 26.0.0' }
     )
