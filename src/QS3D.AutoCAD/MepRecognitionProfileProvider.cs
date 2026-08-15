@@ -53,9 +53,9 @@ internal static class MepRecognitionProfileProvider
     internal static void Save(MepRecognitionProfile profile)
     {
         if (profile is null) throw new ArgumentNullException(nameof(profile));
-        MepRecognitionProfileStore.SaveAtomic(profile);
         lock (Gate)
         {
+            MepRecognitionProfileStore.SaveAtomic(profile);
             _current = profile;
             _isCustom = true;
             _lastError = null;
