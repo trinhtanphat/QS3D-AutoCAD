@@ -2,11 +2,11 @@
 
 **Owner rule — 2026-08-14:** every AI agent/chat session must register its lane before substantive implementation, while ordinary agents/sessions keep claim/status/implementation writes off `main` unless the owner explicitly grants integration authority.
 
-This file is the canonical reservation/integration contract and supersedes older wording that required a claim-only/status-only landing on `main`. Read `docs/AI-SESSION-WORKFLOW.md` together with this file.
+This file is the canonical reservation/integration contract. Read `docs/AI-SESSION-WORKFLOW.md` and `CI_POLICY.md` together with it.
 
 ## Active ownership and claims
 
-Existing `ACTIVE` / `BLOCKED` claim files under `docs/agent-work-claims/` remain valid and must be respected. For new work, prefer a visible GitHub issue dedicated to the lane; a dedicated claim PR is also acceptable. A claim Markdown file may live on the agent/claim branch and be included in its PR, but publishing it to `main` is no longer required.
+Existing `ACTIVE` / `BLOCKED` claim files under `docs/agent-work-claims/` remain valid and must be respected. For new work, prefer a visible GitHub issue dedicated to the lane; a dedicated claim PR is also acceptable. A claim Markdown file may live on the agent/claim branch and be included in its PR, but publishing it to `main` is not required.
 
 A chat message, local patch, private note or unpushed branch is not a reservation.
 
@@ -40,9 +40,17 @@ Each agent/session must refresh `main` as needed, stay inside the reserved scope
 
 Never force-push `main`, reset it backwards or silently overwrite another agent's work.
 
-## CI/fix loop
+## Mandatory task-CI handoff
 
-When applicable CI/checks are red:
+After the final intended branch change, classify the diff against `CI_POLICY.md` and `.github/workflows/ci.yml`.
+
+- If every changed path is CI-neutral-only, full build CI is not required; record the exact head SHA, changed-path classification and relevant lightweight validation.
+- Otherwise the task remains active until `.github/workflows/ci.yml` succeeds for the exact current branch/PR head SHA.
+- Old green runs, another branch/PR, or an older SHA do not satisfy completion.
+- A new implementation-relevant commit invalidates previous green evidence and requires fresh exact-head CI.
+- GitHub Issues are coordination surfaces only; required CI evidence must point to a branch/PR SHA.
+
+When required CI/checks are red:
 
 1. bind the diagnosis to the exact run and exact tested SHA;
 2. inspect the failing job/step/log and find the root cause against current source;
@@ -52,19 +60,30 @@ When applicable CI/checks are red:
 6. run/observe a fresh relevant attempt;
 7. repeat from the newest failure until all required/applicable checks for the lane are green.
 
-Do not weaken tests, architecture guards, security/release gates or expected behavior to obtain green CI. For docs-only changes, intentionally skipped code/release jobs are acceptable when no applicable docs CI exists; record what did and did not run.
+Do not weaken tests, architecture guards, security/release gates or expected behavior to obtain green CI.
 
 ## Multi-agent integration
 
-An authorized coordinator may combine participating branches on `integration/<batch-id>`, deliberately resolve conflicts, verify all required lanes are represented, run combined-tree validation, inspect for accidental reversions/duplicate implementations, freeze the candidate, and only then perform the explicitly authorized final PR/landing to `main`.
+An explicitly authorized coordinator may combine participating work on `integration/<batch-id>` and must:
+
+1. refresh current `origin/main` immediately before freezing the batch;
+2. enumerate exact participating issues/claims/branches/PRs and implementation SHAs;
+3. merge/rebase/cherry-pick or semantically reproduce every required lane without silently dropping work;
+4. deliberately resolve source/API/docs/test/workflow conflicts instead of choosing `ours`/`theirs` blindly;
+5. verify no required implementation remains only on another branch, local worktree, stash or unmerged PR;
+6. inspect the combined diff for accidental reversions and duplicate competing implementations;
+7. require green CI for the exact integration head when the batch is implementation-relevant;
+8. freeze the candidate and perform one explicitly authorized final PR/landing to `main`;
+9. refresh `main`, record the exact final SHA and require green exact-main CI when implementation-relevant;
+10. continue recovery from the newest exact failure until the current final tree is green.
 
 Ordinary agents do not independently merge themselves into `main`.
 
 ## `ALL MERGED TO MAIN`
 
-Report `ALL MERGED TO MAIN` only after an authorized integration reviewer verifies current `main` contains every required implementation, no required code remains only off-main, the combined tree has no unresolved collisions/reversions, required combined validation is acceptable, and the exact current `main` SHA is recorded.
+Report `ALL MERGED TO MAIN` only after an authorized integration reviewer verifies current `main` contains every required repository-safe implementation, no required code remains only off-main, the combined tree has no unresolved collisions/reversions, all participating repository-safe claims are terminal or explicitly superseded, required combined validation is acceptable, and the exact current `main` SHA plus exact-main CI evidence are recorded.
 
-Issue/PR state, branch deletion or old green CI are not sufficient proof.
+Issue/PR state, branch deletion or old green CI are not sufficient proof. Open issues that require external credentials, GitHub settings or licensed native AutoCAD evidence may remain open and must be reported as external/native blockers rather than falsely closed.
 
 ## Prompt/lane completion and session deletion
 
