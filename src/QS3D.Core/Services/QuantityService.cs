@@ -8,7 +8,10 @@ public static class QuantityService
 {
     public static IReadOnlyList<QuantitySummary> Summarize(IEnumerable<StructuralElement> elements)
     {
-        ArgumentNullException.ThrowIfNull(elements);
+        if (elements is null)
+        {
+            throw new ArgumentNullException(nameof(elements));
+        }
 
         return elements
             .GroupBy(element => element.Kind)
