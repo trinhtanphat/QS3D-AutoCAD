@@ -50,6 +50,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+          submodules: recursive
       - name: Verify exact checkout SHA
         shell: pwsh
         run: |
@@ -59,6 +60,11 @@ jobs:
             throw "Checkout SHA mismatch: expected $expected, actual $actual"
           }
           Write-Host "Exact source SHA: $actual"
+          $platform = (& git -C external/QS3D-Platform rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($platform -ne 'e029d4ba0de6ffe80575f7aed96affa1db1b9b33') {
+            throw "QS3D-Platform pin mismatch: expected e029d4ba0de6ffe80575f7aed96affa1db1b9b33, actual $platform"
+          }
+          Write-Host "Exact QS3D-Platform SHA: $platform"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
@@ -76,6 +82,9 @@ jobs:
         run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net8.0-windows
       - name: Build AutoCAD 2027 host
         run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net10.0-windows
+      - name: Cubicost MEP shared-parity guard
+        shell: pwsh
+        run: ./scripts/validate-cubicost-mep-parity.ps1
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
