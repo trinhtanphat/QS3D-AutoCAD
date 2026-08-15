@@ -10,6 +10,8 @@ Before substantive work, every AI agent/chat session must read `docs/AI-SESSION-
 - `fix bug`, `update code`, `commit push git`, `continue all`, `implement all`, `run CI`, `fix CI`, `loop until success` and equivalent prompts never grant `main` authority.
 - Only explicit owner integration authorization may change `main`, such as `merge all to main`, `you are the integration coordinator`, or `allow merge PR #... to main`.
 - Push the final intended task head and open/update its PR/handoff before claiming remote completion.
+- Repository handoff is mandatory: completed implementation/fix work must be committed and pushed to the repository on its dedicated branch/PR. A locally downloaded/generated ZIP, installer or other artifact is supplemental evidence only and must never substitute for the required Git commit/push handoff.
+- `continue all` means continue the in-scope implement -> fix -> commit -> push -> CI loop until the branch/PR lane is complete or an external blocker remains. Do not stop merely to hand the owner a local artifact when repository work is still actionable.
 - Run/observe applicable task-scoped CI and continue diagnose -> fix -> push -> fresh CI until all required/applicable lane checks are green. CI ownership is not `main` authority and is not release/publish authority.
 - Every session must end with explicit `PROMPT/LANE STATUS: 100% COMPLETE/NOT 100% COMPLETE`, `SESSION CAN BE CLOSED/DELETED: YES/NO`, and separate `MERGED TO MAIN: YES/NO` plus exact SHA/evidence/blockers.
 - If not 100% complete and actionable work remains within the session's scope/tools/permissions, continue the loop instead of stopping at a checkpoint.
