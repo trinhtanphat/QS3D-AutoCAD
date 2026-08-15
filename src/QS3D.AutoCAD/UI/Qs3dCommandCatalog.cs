@@ -59,7 +59,7 @@ internal static class Qs3dCommandCatalog
     public static IEnumerable<Qs3dCommandDescriptor> Search(string? query)
     {
         if (string.IsNullOrWhiteSpace(query)) return Array.Empty<Qs3dCommandDescriptor>();
-        var normalized = query.Trim();
+        var normalized = query!.Trim();
         return All.Where(item =>
             item.Command.IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0 ||
             UiText.Get(item.LabelKey).IndexOf(normalized, StringComparison.CurrentCultureIgnoreCase) >= 0 ||
