@@ -2,12 +2,19 @@
 param(
     [string]$ArtifactsDirectory = '',
     [string]$EvidenceDirectory = '',
+    [string[]]$Generations = @('2025','2026','2027'),
     [switch]$NoHostDiscovery,
     [switch]$Json
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$supportedGenerations = @('2021','2025','2026','2027')
+$Generations = @($Generations | ForEach-Object { [string]$_ } | Select-Object -Unique)
+if ($Generations.Count -eq 0) { throw 'At least one AutoCAD generation must be requested.' }
+foreach ($generation in $Generations) {
+    if ($generation -notin $supportedGenerations) { throw "Unsupported AutoCAD generation '$generation'." }
+}
 $artifacts = if ([string]::IsNullOrWhiteSpace($ArtifactsDirectory)) {
     Join-Path $repo 'artifacts'
 }
@@ -64,7 +71,7 @@ function Find-AcadExe([string]$Generation, $Evidence) {
     return $null
 }
 
-$rows = foreach ($generation in @('2025', '2026', '2027')) {
+$rows = foreach ($generation in $Generations) {
     $evidencePath = Join-Path $evidenceRoot "AutoCAD-$generation.json"
     $evidence = $null
     $invalid = @()
@@ -159,6 +166,7 @@ $result = [ordered]@{
     schemaVersion = 1
     currentCandidate = $currentCandidate
     evidenceDirectory = $evidenceRoot
+    requestedGenerations = @($Generations)
     generations = @($rows)
     allReady = (@($rows | Where-Object { -not $_.ready }).Count -eq 0)
 }
@@ -182,5 +190,5 @@ if (-not $result.allReady) {
     Write-Host 'Native acceptance is not complete. Only real licensed AutoCAD evidence may move pending/blocked/fail checks to pass.'
 }
 else {
-    Write-Host 'All native evidence files report complete passing coverage for the prepared candidate. Run validate-native-acceptance.ps1 for the fail-closed final validation.'
+    Write-Host 'All requested native evidence files report complete passing coverage for the prepared candidate. Run validate-native-acceptance.ps1 with the same generation set for fail-closed final validation.'
 }
