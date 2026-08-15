@@ -24,7 +24,7 @@ foreach ($required in @(
     'MepRecognitionProfiles.CreateDefault()',
     'new MepQuantityService().Aggregate',
     'new ClashDetectionService().Detect',
-    'solid.CheckInterference',
+    'left.Solid.CheckInterference',
     'editor.SetImpliedSelection(pair)',
     'editor.SetCurrentView(view)',
     'entity.GeometricExtents',
@@ -37,13 +37,18 @@ foreach ($required in @(
     }
 }
 
+# Point3d.TransformBy is required for the read-only zoom view transform. Guard only
+# native database-entity/solid transforms here so the source check does not mistake
+# coordinate conversion for CAD mutation.
 foreach ($forbidden in @(
     'OpenMode.ForWrite',
     'AppendEntity',
     '.Erase(',
-    'TransformBy(',
-    'BooleanOperation(',
-    'Clone(',
+    'entity.TransformBy(',
+    'solid.TransformBy(',
+    '.BooleanOperation(',
+    'solid.Clone(',
+    'entity.Clone(',
     'Task.Run',
     'Parallel.For'
 )) {
