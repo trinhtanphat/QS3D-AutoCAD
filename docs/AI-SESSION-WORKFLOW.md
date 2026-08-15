@@ -53,6 +53,10 @@ For the reserved lane:
 7. open or update the PR/handoff with exact commit SHA and evidence;
 8. if defects remain, continue the same loop instead of reporting completion.
 
+Repository commit/push is the canonical handoff. A locally generated/downloaded ZIP, installer, binary or other artifact may be useful supplemental evidence, but it is **not** a substitute for committing and pushing the actual source/docs/tests/config changes to the dedicated repository branch/PR.
+
+When the owner says `continue all` without granting `main` authority, continue the in-scope implementation/fix/validation loop and keep pushing repository commits until that branch/PR lane is complete or a real external blocker is reached. Do not stop merely to deliver a local artifact when repository work remains actionable.
+
 Never weaken tests, architecture guards, security checks, release gates or expected behavior merely to obtain a green result.
 
 ## 5. CI loop — continue until applicable checks are green
