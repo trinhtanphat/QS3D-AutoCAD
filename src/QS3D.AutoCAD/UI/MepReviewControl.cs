@@ -5,13 +5,17 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using QS3D.Platform.Parity;
 using AcApplication = Autodesk.AutoCAD.ApplicationServices.Core.Application;
+using WpfButton = System.Windows.Controls.Button;
+using WpfDataGrid = System.Windows.Controls.DataGrid;
+using WpfPanel = System.Windows.Controls.Panel;
+using WpfUserControl = System.Windows.Controls.UserControl;
 
 namespace QS3D.AutoCAD.UI;
 
-internal sealed class MepReviewControl : UserControl
+internal sealed class MepReviewControl : WpfUserControl
 {
     private readonly ObservableCollection<RuleRow> _rows = new();
-    private readonly DataGrid _grid = new();
+    private readonly WpfDataGrid _grid = new();
     private readonly TextBlock _status = new();
 
     internal MepReviewControl()
@@ -104,9 +108,9 @@ internal sealed class MepReviewControl : UserControl
         Width = new DataGridLength(width)
     };
 
-    private static Button Button(string label, RoutedEventHandler handler)
+    private static WpfButton Button(string label, RoutedEventHandler handler)
     {
-        var button = new Button
+        var button = new WpfButton
         {
             Content = label,
             MinWidth = 96,
@@ -117,7 +121,7 @@ internal sealed class MepReviewControl : UserControl
         return button;
     }
 
-    private static void AddAction(Panel panel, string label, string command)
+    private static void AddAction(WpfPanel panel, string label, string command)
     {
         panel.Children.Add(Button(label, (_, _) => QueueCommand(command)));
     }
