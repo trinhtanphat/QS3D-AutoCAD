@@ -60,7 +60,7 @@ internal sealed record Qs3dEntityMetadata(
         var safeName = Name.Replace('|', '_').Replace('=', '_');
         if (safeName.Length > 200)
         {
-            safeName = safeName[..200];
+            safeName = safeName.Substring(0, 200);
         }
 
         entity.XData = new ResultBuffer(
