@@ -50,16 +50,15 @@ internal static class Qs3dCommandCatalog
         new("QS3D", "workspace", SectionSystem, "open workspace palette qs3d")
     ];
 
+    public static Qs3dCommandDescriptor Get(string command) =>
+        All.First(item => string.Equals(item.Command, command, StringComparison.OrdinalIgnoreCase));
+
     public static IEnumerable<Qs3dCommandDescriptor> InSection(string section) =>
         All.Where(item => string.Equals(item.Section, section, StringComparison.Ordinal));
 
     public static IEnumerable<Qs3dCommandDescriptor> Search(string? query)
     {
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return Array.Empty<Qs3dCommandDescriptor>();
-        }
-
+        if (string.IsNullOrWhiteSpace(query)) return Array.Empty<Qs3dCommandDescriptor>();
         var normalized = query.Trim();
         return All.Where(item =>
             item.Command.IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0 ||
