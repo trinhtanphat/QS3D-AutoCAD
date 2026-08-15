@@ -82,6 +82,9 @@ jobs:
         run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net8.0-windows
       - name: Build AutoCAD 2027 host
         run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net10.0-windows
+      - name: Cubicost MEP shared-parity guard
+        shell: pwsh
+        run: ./scripts/validate-cubicost-mep-parity.ps1
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
