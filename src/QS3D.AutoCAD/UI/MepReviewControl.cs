@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using QS3D.Platform.Parity;
 using AcApplication = Autodesk.AutoCAD.ApplicationServices.Core.Application;
+using WpfBinding = System.Windows.Data.Binding;
 using WpfButton = System.Windows.Controls.Button;
 using WpfDataGrid = System.Windows.Controls.DataGrid;
 using WpfPanel = System.Windows.Controls.Panel;
@@ -104,7 +105,7 @@ internal sealed class MepReviewControl : WpfUserControl
     private static DataGridTextColumn TextColumn(string header, string property, double width) => new()
     {
         Header = header,
-        Binding = new Binding(property) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+        Binding = new WpfBinding(property) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
         Width = new DataGridLength(width)
     };
 
