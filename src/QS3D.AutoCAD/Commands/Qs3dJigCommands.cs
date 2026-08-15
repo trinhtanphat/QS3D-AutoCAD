@@ -266,7 +266,7 @@ public sealed class Qs3dJigCommands
         if (start.Status != PromptStatus.OK) return;
         var width = PromptPositive(editor, widthLabel, defaultWidth); if (width is null) return;
         var height = PromptPositive(editor, heightLabel, defaultHeight); if (height is null) return;
-        var name = PromptName(editor, $"{label} name", label[..1].ToUpperInvariant()); if (name is null) return;
+        var name = PromptName(editor, $"{label} name", label.Substring(0, 1).ToUpperInvariant()); if (name is null) return;
 
         IEnumerable<Entity> Preview(Point3d end) =>
             [AutoCadDrawing.CreatePlanOrientedBox(start.Value, end, width.Value, height.Value)];
@@ -385,7 +385,7 @@ public sealed class Qs3dJigCommands
 
     private static double LiveTextHeight(params double[] dimensions)
     {
-        var reference = dimensions.Where(value => double.IsFinite(value) && value > 0).DefaultIfEmpty(1.0).Min();
+        var reference = dimensions.Where(value => !double.IsNaN(value) && !double.IsInfinity(value) && value > 0).DefaultIfEmpty(1.0).Min();
         return reference * 0.05;
     }
 
