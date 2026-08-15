@@ -70,6 +70,8 @@ jobs:
         run: dotnet run --project tests/QS3D.Core.SmokeTests/QS3D.Core.SmokeTests.csproj -c Release -f net8.0
       - name: Smoke .NET 10
         run: dotnet run --project tests/QS3D.Core.SmokeTests/QS3D.Core.SmokeTests.csproj -c Release -f net10.0
+      - name: Build AutoCAD 2021 host
+        run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net48
       - name: Build AutoCAD 2025-2026 host
         run: dotnet build src/QS3D.AutoCAD/QS3D.AutoCAD.csproj -c Release -f net8.0-windows
       - name: Build AutoCAD 2027 host
