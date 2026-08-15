@@ -94,7 +94,7 @@ public sealed class Qs3dReferenceManagerCommands
         transaction.Commit();
 
         Qs3dPalette.RefreshBrowser();
-        editor.WriteMessage($"\nResequenced {plan.Length} Level(s) by {(descending ? "descending" : "ascending")} elevation from {plan[0].Name} to {plan[^1].Name}. Elevations, semantic ids and dependencies are unchanged.\n");
+        editor.WriteMessage($"\nResequenced {plan.Length} Level(s) by {(descending ? "descending" : "ascending")} elevation from {plan[0].Name} to {plan[plan.Length - 1].Name}. Elevations, semantic ids and dependencies are unchanged.\n");
     }
 
     [CommandMethod("QS3DGRIDSEQUENCE", CommandFlags.Modal)]
@@ -180,7 +180,7 @@ public sealed class Qs3dReferenceManagerCommands
         transaction.Commit();
 
         Qs3dPalette.RefreshBrowser();
-        editor.WriteMessage($"\nResequenced {plan.Length} parallel Grid(s) by spatial offset from {plan[0].Name} to {plan[^1].Name}. Geometry, semantic ids and dependent bindings are unchanged.\n");
+        editor.WriteMessage($"\nResequenced {plan.Length} parallel Grid(s) by spatial offset from {plan[0].Name} to {plan[plan.Length - 1].Name}. Geometry, semantic ids and dependent bindings are unchanged.\n");
     }
 
     private static void ApplyRename(
