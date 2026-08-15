@@ -3,6 +3,7 @@ param(
     [string[]]$EvidencePaths = @(),
     [string]$EvidenceDirectory = '',
     [string]$ExpectedCommit = '',
+    [string[]]$RequiredGenerations = @('2025','2026','2027'),
     [switch]$RequireSignedCandidate
 )
 
@@ -11,6 +12,15 @@ $repo = Split-Path -Parent $PSScriptRoot
 $verifyArtifacts = Join-Path $repo 'scripts\verify-artifacts.ps1'
 $provenancePath = Join-Path $repo 'artifacts\RELEASE-PROVENANCE.json'
 $requiredChecksPath = Join-Path $repo 'native-acceptance\required-checks.json'
+$supportedGenerations = @('2021','2025','2026','2027')
+
+$RequiredGenerations = @($RequiredGenerations | ForEach-Object { [string]$_ } | Select-Object -Unique)
+if ($RequiredGenerations.Count -eq 0) { throw 'At least one required AutoCAD generation must be specified.' }
+foreach ($requiredGeneration in $RequiredGenerations) {
+    if ($requiredGeneration -notin $supportedGenerations) {
+        throw "Unsupported required AutoCAD generation '$requiredGeneration'."
+    }
+}
 
 & $verifyArtifacts -Version $Version -ExpectedCommit $ExpectedCommit -RequireSigned:$RequireSignedCandidate
 
@@ -37,7 +47,9 @@ if ($EvidencePaths.Count -eq 0) {
     if (-not (Test-Path -LiteralPath $EvidenceDirectory -PathType Container)) {
         throw "Native acceptance evidence directory not found: $EvidenceDirectory"
     }
-    $EvidencePaths = @(Get-ChildItem -LiteralPath $EvidenceDirectory -Filter 'AutoCAD-*.json' -File | ForEach-Object { $_.FullName })
+    $EvidencePaths = @($RequiredGenerations | ForEach-Object {
+        Join-Path $EvidenceDirectory "AutoCAD-$_.json"
+    })
 }
 else {
     $EvidencePaths = @($EvidencePaths | ForEach-Object {
@@ -45,8 +57,8 @@ else {
     })
 }
 
-if ($EvidencePaths.Count -ne 3) {
-    throw "Exactly three native acceptance evidence files are required (AutoCAD 2025, 2026, 2027); found $($EvidencePaths.Count)."
+if ($EvidencePaths.Count -ne $RequiredGenerations.Count) {
+    throw "Exactly $($RequiredGenerations.Count) native acceptance evidence file(s) are required for generations $($RequiredGenerations -join ', '); found $($EvidencePaths.Count)."
 }
 
 $provenanceArtifacts = @{}
@@ -112,10 +124,17 @@ foreach ($path in $EvidencePaths) {
     }
 
     $generation = [string]$evidence.host.generation
-    if ($generation -notin @('2025','2026','2027')) {
+    if ($generation -notin $supportedGenerations) {
         throw "${fileName}: invalid AutoCAD generation '$generation'."
     }
-    $expectedRuntime = if ($generation -eq '2027') { '.NET 10' } else { '.NET 8' }
+    if ($generation -notin $RequiredGenerations) {
+        throw "${fileName}: AutoCAD generation '$generation' was not requested for this validation."
+    }
+    $expectedRuntime = switch ($generation) {
+        '2021' { '.NET Framework 4.8' }
+        '2027' { '.NET 10' }
+        default { '.NET 8' }
+    }
     if ([string]$evidence.host.expectedRuntimeFamily -ne $expectedRuntime) {
         throw "${fileName}: expected runtime family must be $expectedRuntime for AutoCAD $generation."
     }
@@ -125,7 +144,11 @@ foreach ($path in $EvidencePaths) {
     if ([string]$evidence.host.observedClrVersion -notmatch '^(?<major>\d+)\.') {
         throw "${fileName}: observed CLR version is malformed: $($evidence.host.observedClrVersion)."
     }
-    $expectedMajor = if ($generation -eq '2027') { 10 } else { 8 }
+    $expectedMajor = switch ($generation) {
+        '2021' { 4 }
+        '2027' { 10 }
+        default { 8 }
+    }
     if ([int]$Matches.major -ne $expectedMajor) {
         throw "${fileName}: observed CLR $($evidence.host.observedClrVersion) does not match expected $expectedRuntime."
     }
@@ -188,13 +211,13 @@ foreach ($path in $EvidencePaths) {
 }
 
 $generations = @($evidenceRecords | ForEach-Object { $_.generation })
-foreach ($requiredGeneration in @('2025','2026','2027')) {
+foreach ($requiredGeneration in $RequiredGenerations) {
     if (@($generations | Where-Object { $_ -eq $requiredGeneration }).Count -ne 1) {
         throw "Native acceptance requires exactly one passing AutoCAD $requiredGeneration session."
     }
 }
 $sessionIds = @($evidenceRecords | ForEach-Object { $_.sessionId } | Select-Object -Unique)
-if ($sessionIds.Count -ne 3) {
+if ($sessionIds.Count -ne $RequiredGenerations.Count) {
     throw 'Native acceptance evidence sessions must have distinct sessionId values.'
 }
 
@@ -208,6 +231,7 @@ $summary = [ordered]@{
     version = $Version
     sourceCommit = $ExpectedCommit
     candidateSigned = [bool]$provenance.signed
+    requiredGenerations = @($RequiredGenerations)
     validatedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
     hosts = @($evidenceRecords | Sort-Object generation)
 }
@@ -215,6 +239,7 @@ $summary | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $summaryPath -Enc
 Set-Content -LiteralPath $shaPath -Value $ExpectedCommit -Encoding ascii
 
 Write-Host "NATIVE ACCEPTANCE EVIDENCE VALIDATED for exact source SHA $ExpectedCommit"
+Write-Host "Generations: $($RequiredGenerations -join ', ')"
 Write-Host "Summary: $summaryPath"
 Write-Host "Accepted SHA candidate file: $shaPath"
 Write-Host 'This validator does not modify GitHub variables or publish a release. A human/release owner must review the evidence before setting QS3D_NATIVE_ACCEPTED_SHA.'

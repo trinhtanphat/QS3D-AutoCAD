@@ -20,14 +20,14 @@ internal static class DwgProjectStore
             state = Parse(xrecord.Data) ?? new DwgProjectState(Guid.NewGuid(), "QS3D Project");
             if (!string.IsNullOrWhiteSpace(requestedName) && !string.Equals(state.Name, requestedName, StringComparison.Ordinal))
             {
-                state = state with { Name = requestedName.Trim() };
+                state = state with { Name = requestedName!.Trim() };
                 xrecord.Data = Serialize(state);
             }
         }
         else
         {
             dictionary.UpgradeOpen();
-            state = new DwgProjectState(Guid.NewGuid(), string.IsNullOrWhiteSpace(requestedName) ? "QS3D Project" : requestedName.Trim());
+            state = new DwgProjectState(Guid.NewGuid(), string.IsNullOrWhiteSpace(requestedName) ? "QS3D Project" : requestedName!.Trim());
             var xrecord = new Xrecord { Data = Serialize(state) };
             dictionary.SetAt(DictionaryKey, xrecord);
             transaction.AddNewlyCreatedDBObject(xrecord, true);

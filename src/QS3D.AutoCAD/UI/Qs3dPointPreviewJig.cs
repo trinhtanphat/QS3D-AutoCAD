@@ -106,9 +106,16 @@ internal sealed class Qs3dPointPreviewJig : DrawJig
 
     private void DrawAnnotation(WorldDraw draw)
     {
-        if (_annotationFactory?.Invoke(_currentPoint) is not Qs3dPreviewAnnotation annotation ||
-            string.IsNullOrWhiteSpace(annotation.Text) ||
-            !double.IsFinite(annotation.TextHeight) ||
+        var annotationValue = _annotationFactory?.Invoke(_currentPoint);
+        if (!annotationValue.HasValue)
+        {
+            return;
+        }
+
+        var annotation = annotationValue.Value;
+        if (string.IsNullOrWhiteSpace(annotation.Text) ||
+            double.IsNaN(annotation.TextHeight) ||
+            double.IsInfinity(annotation.TextHeight) ||
             annotation.TextHeight <= 0)
         {
             return;

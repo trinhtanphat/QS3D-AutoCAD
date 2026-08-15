@@ -55,9 +55,11 @@ if ($manifest.sourceDirty -ne $false) { throw 'Release provenance reports a dirt
 if ($RequireSigned -and $manifest.signed -ne $true) { throw 'A signed release was required but provenance reports signed=false.' }
 
 $matrix = @($manifest.runtimeMatrix)
-if ($matrix.Count -ne 2) { throw 'Release provenance must contain exactly two AutoCAD runtime families.' }
+if ($matrix.Count -ne 3) { throw 'Release provenance must contain exactly three AutoCAD runtime families.' }
+$net48 = $matrix | Where-Object { $_.targetFramework -eq 'net48' -and $_.autoCAD -eq '2021' -and $_.managedRuntime -eq '.NET Framework 4.8' }
 $net8 = $matrix | Where-Object { $_.targetFramework -eq 'net8.0-windows' -and $_.autoCAD -eq '2025-2026' }
 $net10 = $matrix | Where-Object { $_.targetFramework -eq 'net10.0-windows' -and $_.autoCAD -eq '2027' }
+if ($null -eq $net48) { throw 'Release provenance is missing the AutoCAD 2021 / .NET Framework 4.8 payload.' }
 if ($null -eq $net8) { throw 'Release provenance is missing the AutoCAD 2025-2026 / .NET 8 payload.' }
 if ($null -eq $net10) { throw 'Release provenance is missing the AutoCAD 2027 / .NET 10 payload.' }
 

@@ -45,7 +45,7 @@ public static class ElementFactory
 
     private static void EnsureNonNegative(double value, string name)
     {
-        if (!double.IsFinite(value) || value < 0)
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0)
         {
             throw new ArgumentOutOfRangeException(name, "Dimensions must be finite and non-negative.");
         }

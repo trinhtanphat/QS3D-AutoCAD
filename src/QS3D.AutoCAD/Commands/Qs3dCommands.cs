@@ -214,7 +214,7 @@ public sealed class Qs3dCommands
         var start = editor.GetPoint($"\n{label} start point: "); if (start.Status != PromptStatus.OK) return;
         var end = editor.GetPoint(new PromptPointOptions($"\n{label} end point: ") { BasePoint = start.Value, UseBasePoint = true }); if (end.Status != PromptStatus.OK) return;
         if (start.Value.DistanceTo(end.Value) <= Tolerance.Global.EqualPoint) return;
-        var name = PromptName(editor, $"{label} name", label[..1].ToUpperInvariant()); if (name is null) return;
+        var name = PromptName(editor, $"{label} name", label.Substring(0, 1).ToUpperInvariant()); if (name is null) return;
         var semanticId = Guid.NewGuid();
 
         using var transaction = database.TransactionManager.StartTransaction();
@@ -237,7 +237,7 @@ public sealed class Qs3dCommands
         var end = editor.GetPoint(new PromptPointOptions($"\n{label} end point: ") { BasePoint = start.Value, UseBasePoint = true }); if (end.Status != PromptStatus.OK) return;
         var width = PromptDouble(editor, kind == ElementKind.Wall ? "Wall thickness" : "Beam width", defaultWidth); if (width is null) return;
         var height = PromptDouble(editor, $"{label} height", defaultHeight); if (height is null) return;
-        var name = PromptName(editor, $"{label} name", label[..1].ToUpperInvariant()); if (name is null) return;
+        var name = PromptName(editor, $"{label} name", label.Substring(0, 1).ToUpperInvariant()); if (name is null) return;
 
         try
         {

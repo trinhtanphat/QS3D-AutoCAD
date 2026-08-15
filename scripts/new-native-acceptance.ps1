@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
-    [Parameter(Mandatory = $true)][ValidateSet('2025','2026','2027')][string]$HostGeneration,
+    [Parameter(Mandatory = $true)][ValidateSet('2021','2025','2026','2027')][string]$HostGeneration,
     [Parameter(Mandatory = $true)][string]$AcadExe,
     [string]$Operator = $env:USERNAME,
     [string]$Notes = '',
@@ -34,9 +34,16 @@ if ($requiredChecks.schemaVersion -ne 1 -or @($requiredChecks.checks).Count -eq 
     throw 'Native acceptance required-check contract is invalid.'
 }
 
-$expectedRuntime = if ($HostGeneration -eq '2027') { '.NET 10' } else { '.NET 8' }
+$expectedRuntime = switch ($HostGeneration) {
+    '2021' { '.NET Framework 4.8' }
+    '2027' { '.NET 10' }
+    default { '.NET 8' }
+}
 $matrixMatch = @($provenance.runtimeMatrix) | Where-Object {
-    if ($HostGeneration -eq '2027') {
+    if ($HostGeneration -eq '2021') {
+        $_.autoCAD -eq '2021' -and $_.managedRuntime -eq $expectedRuntime
+    }
+    elseif ($HostGeneration -eq '2027') {
         $_.autoCAD -eq '2027' -and $_.managedRuntime -eq $expectedRuntime
     }
     else {

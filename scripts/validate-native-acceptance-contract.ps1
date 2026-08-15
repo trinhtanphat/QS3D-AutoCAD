@@ -26,9 +26,15 @@ if ($contract.schemaVersion -ne 1) {
 }
 
 $generationEnum = @($schema.properties.host.properties.generation.enum)
-foreach ($generation in @('2025','2026','2027')) {
+foreach ($generation in @('2021','2025','2026','2027')) {
     if ($generationEnum -notcontains $generation) {
         throw "Native evidence schema is missing AutoCAD generation $generation."
+    }
+}
+$runtimeEnum = @($schema.properties.host.properties.expectedRuntimeFamily.enum)
+foreach ($runtime in @('.NET Framework 4.8','.NET 8','.NET 10')) {
+    if ($runtimeEnum -notcontains $runtime) {
+        throw "Native evidence schema is missing runtime family '$runtime'."
     }
 }
 $statusEnum = @($schema.properties.checks.items.properties.status.enum)
@@ -89,7 +95,7 @@ $runtimeSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\record-
 $validateSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\validate-native-acceptance.ps1')
 $rejectionSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\test-native-acceptance-failclosed.ps1')
 
-foreach ($requiredSnippet in @('All acceptance checks start as pending', "status = 'pending'", 'verify-artifacts.ps1', 'GetVersionInfo')) {
+foreach ($requiredSnippet in @('All acceptance checks start as pending', "status = 'pending'", 'verify-artifacts.ps1', 'GetVersionInfo', "ValidateSet('2021','2025','2026','2027')", ".NET Framework 4.8")) {
     if (-not $newSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native session creation regression: missing '$requiredSnippet'."
     }
@@ -99,14 +105,14 @@ foreach ($requiredSnippet in @("ValidateSet('pending','pass','fail','blocked')",
         throw "Native result recorder regression: missing '$requiredSnippet'."
     }
 }
-foreach ($requiredSnippet in @('observedClrVersion', "generation -eq '2027'", "{ 10 } else { 8 }")) {
+foreach ($requiredSnippet in @('observedClrVersion', "'2021' { 4 }", "'2027' { 10 }", 'default { 8 }')) {
     if (-not $runtimeSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native runtime recorder regression: missing '$requiredSnippet'."
     }
 }
 foreach ($requiredSnippet in @(
-    'Exactly three native acceptance evidence files are required',
-    "@('2025','2026','2027')",
+    "RequiredGenerations = @('2025','2026','2027')",
+    "supportedGenerations = @('2021','2025','2026','2027')",
     "status -ne 'pass'",
     'distinct sessionId values',
     'does not modify GitHub variables or publish a release'
@@ -134,5 +140,5 @@ foreach ($forbidden in @('gh variable set', 'gh release create', 'git tag', 'Set
     }
 }
 
-Write-Host "Native acceptance contract guards passed with $($ids.Count) required native checks."
+Write-Host "Native acceptance contract guards passed with $($ids.Count) required native checks and AutoCAD 2021/2025/2026/2027 schema support."
 Write-Host 'Hosted CI validates tooling only; it does not create native PASS evidence.'
