@@ -1,18 +1,28 @@
-name: CI
+name: QS3D AutoCAD CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "agent/**"
+      - "recovery/**"
+      - "integration/**"
   pull_request:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   core-host-and-guards:
     runs-on: windows-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
