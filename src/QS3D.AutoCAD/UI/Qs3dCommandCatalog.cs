@@ -62,9 +62,9 @@ internal static class Qs3dCommandCatalog
 
         var normalized = query.Trim();
         return All.Where(item =>
-            item.Command.Contains(normalized, StringComparison.OrdinalIgnoreCase) ||
-            UiText.Get(item.LabelKey).Contains(normalized, StringComparison.CurrentCultureIgnoreCase) ||
-            item.Keywords.Contains(normalized, StringComparison.OrdinalIgnoreCase));
+            item.Command.IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0 ||
+            UiText.Get(item.LabelKey).IndexOf(normalized, StringComparison.CurrentCultureIgnoreCase) >= 0 ||
+            item.Keywords.IndexOf(normalized, StringComparison.OrdinalIgnoreCase) >= 0);
     }
 }
 
