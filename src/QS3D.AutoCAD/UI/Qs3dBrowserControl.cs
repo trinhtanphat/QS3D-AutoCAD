@@ -13,6 +13,7 @@ internal sealed class Qs3dBrowserControl : UserControl
 {
     private readonly Label _title = new();
     private readonly TextBox _filter = new();
+    private readonly ToolTip _filterToolTip = new();
     private readonly ComboBox _kindFilter = new();
     private readonly ListView _list = new();
     private readonly PropertyGrid _properties = new();
@@ -115,6 +116,7 @@ internal sealed class Qs3dBrowserControl : UserControl
         {
             UiText.LanguageChanged -= OnLanguageChanged;
             BindDocument(null);
+            _filterToolTip.Dispose();
         }
         base.Dispose(disposing);
     }
@@ -131,11 +133,7 @@ internal sealed class Qs3dBrowserControl : UserControl
             dark = true;
         }
 
-        if (!dark)
-        {
-            return;
-        }
-
+        if (!dark) return;
         BackColor = Color.FromArgb(32, 34, 37);
         ForeColor = Color.FromArgb(243, 244, 246);
         _list.BackColor = Color.FromArgb(42, 45, 49);
@@ -187,17 +185,11 @@ internal sealed class Qs3dBrowserControl : UserControl
             _properties.SelectedObject = null;
             foreach (var item in _items)
             {
-                if (selectedKind is not null && !string.Equals(item.Metadata.Kind.ToString(), selectedKind, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+                if (selectedKind is not null && !string.Equals(item.Metadata.Kind.ToString(), selectedKind, StringComparison.OrdinalIgnoreCase)) continue;
                 if (query.Length > 0 &&
                     item.Metadata.Name.IndexOf(query, StringComparison.CurrentCultureIgnoreCase) < 0 &&
                     item.Metadata.Kind.ToString().IndexOf(query, StringComparison.CurrentCultureIgnoreCase) < 0 &&
-                    item.Handle.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0)
-                {
-                    continue;
-                }
+                    item.Handle.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0) continue;
 
                 var row = new ListViewItem(item.Metadata.Kind.ToString()) { Tag = item };
                 row.SubItems.Add(item.Metadata.Name);
@@ -231,10 +223,7 @@ internal sealed class Qs3dBrowserControl : UserControl
 
     private void OnCommandEnded(object sender, CommandEventArgs e)
     {
-        if (e.GlobalCommandName.StartsWith("QS3D", StringComparison.OrdinalIgnoreCase))
-        {
-            RefreshData();
-        }
+        if (e.GlobalCommandName.StartsWith("QS3D", StringComparison.OrdinalIgnoreCase)) RefreshData();
     }
 
     private void SyncFromDrawingSelection()
@@ -305,7 +294,7 @@ internal sealed class Qs3dBrowserControl : UserControl
     private void ApplyLanguage()
     {
         _title.Text = UiText.Get("elements");
-        _filter.PlaceholderText = UiText.Get("browserSearchHint");
+        _filterToolTip.SetToolTip(_filter, UiText.Get("browserSearchHint"));
         _refresh.Text = UiText.Get("refresh");
         _select.Text = UiText.Get("select");
         _edit.Text = UiText.Get("edit");
@@ -318,7 +307,6 @@ internal sealed class Qs3dBrowserControl : UserControl
     private sealed class EntityPropertyView
     {
         private readonly Qs3dIndexedEntity _entity;
-
         public EntityPropertyView(Qs3dIndexedEntity entity) => _entity = entity;
 
         [Category("Identity")]
