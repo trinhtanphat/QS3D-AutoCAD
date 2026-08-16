@@ -16,7 +16,7 @@ foreach ($requirement in @(
     'github.event.pull_request.head.sha',
     'Verify exact checkout SHA',
     'git rev-parse HEAD',
-    'cancel-in-progress: true'
+    'cancel-in-progress: ${{ !(github.event_name == ''push'' && github.ref_name == ''main'') }}'
 )) {
     if (-not $ciWorkflow.Contains($requirement, [StringComparison]::Ordinal)) {
         throw "Exact-SHA CI regression: CI workflow is missing '$requirement'."
