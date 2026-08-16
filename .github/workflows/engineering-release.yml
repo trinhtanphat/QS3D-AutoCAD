@@ -119,8 +119,13 @@ jobs:
             }
           }
 
-          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $releaseTags = @(gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')
+          $releaseLookupExitCode = $LASTEXITCODE
+          if ($releaseLookupExitCode -ne 0) {
+            throw "Unable to inspect engineering releases before mutation for $tag."
+          }
+          $releaseExists = @($releaseTags | Where-Object { ([string]$_).Trim() -eq $tag }).Count -gt 0
+          if ($releaseExists) {
             gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw "Unable to refresh existing engineering prerelease $tag." }
           }
