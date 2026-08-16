@@ -63,11 +63,15 @@ For the reserved lane:
 4. run relevant local/static/unit/smoke/preflight checks;
 5. review the diff for accidental reversions, overlap, duplicate implementations and unrelated edits;
 6. create coherent request/lane-scoped commits rather than file-by-file noise;
-7. push the branch so the implementation is reviewable in GitHub;
-8. run/observe applicable exact-head branch CI before a new PR when the changed paths require CI;
-9. refresh `main` again; if it moved materially, reconcile safely on the task branch, push the new head and obtain fresh required CI;
-10. open or update the PR/handoff with the exact branch/head SHA and evidence;
-11. if defects remain, continue the same loop instead of reporting completion.
+7. immediately before each push, fetch the remote ref for this task branch and compare it with the task-branch head last observed by this session;
+8. if the remote task branch advanced unexpectedly, do not force-push or overwrite it; reconcile the same-lane commits deliberately, or move this session's work to a new branch if ownership is ambiguous;
+9. push only a fast-forward-safe task-branch update so the implementation is reviewable in GitHub;
+10. run/observe applicable exact-head branch CI before a new PR when the changed paths require CI;
+11. refresh `main` again; if it moved materially, reconcile safely on the task branch, re-check the remote task-branch head, push the new head and obtain fresh required CI;
+12. open or update the PR/handoff with the exact branch/head SHA and evidence;
+13. if defects remain, continue the same loop instead of reporting completion.
+
+A published task branch is single-writer by default. A later session that wants to continue the same branch must first confirm the current remote head and preserve all commits already published there.
 
 Never force-push or reset `main`, silently overwrite another agent's work, use `ours`/`theirs` blindly, or weaken tests/architecture/security/release gates merely to obtain a green result.
 

@@ -6,6 +6,7 @@ Issue: <!-- #123; reuse the existing task issue instead of creating a duplicate 
 Task branch: <!-- agent/<agent-id>/<scope>, recovery/<agent-id>/<scope>, or integration/<batch-id> when explicitly authorized -->
 Baseline `main` SHA: <!-- exact 40-hex SHA used to start/reconcile this work -->
 Head SHA: <!-- exact candidate SHA validated by applicable CI -->
+Pre-push remote task-branch SHA: <!-- exact remote head observed immediately before the final fast-forward-safe push -->
 
 Summarize the behavior changed and the user-visible reason for the change. Keep unrelated work out of this PR.
 
@@ -14,8 +15,9 @@ Summarize the behavior changed and the user-visible reason for the change. Keep 
 - [ ] I performed only the minimum collision check needed and did not take over another active lane.
 - [ ] This PR stays inside the registered Issue/claim scope and exclusions.
 - [ ] I refreshed current `main` before final handoff and reconciled any relevant landed work without silently dropping it.
+- [ ] I verified the remote task-branch head immediately before the final push and did not overwrite a concurrent commit.
 - [ ] The final diff contains no accidental reversions, duplicate competing implementations or unresolved merge markers.
-- [ ] I did not use `ours`/`theirs` blindly or force/reset shared `main`.
+- [ ] I did not use `ours`/`theirs` blindly or force/reset shared `main` or a published task branch.
 
 ## Validation
 

@@ -88,10 +88,14 @@ Before a material write:
 Before each final branch push and PR handoff:
 
 1. refresh `origin/main` again;
-2. check whether relevant current-main code moved;
-3. reconcile safely on the task branch if necessary;
-4. review the final diff for unrelated reversions or duplicate implementations;
-5. obtain fresh exact-head CI when the changed paths require it.
+2. fetch/read the current remote ref for **this task branch** and compare it with the task-branch head last observed by this session;
+3. if the published task branch advanced unexpectedly, treat that as a concurrent write: do not push over it, do not reset it backwards, and do not force-push; reconcile the same-lane commits deliberately or move this session's work to a new branch when ownership is ambiguous;
+4. check whether relevant current-main code moved;
+5. reconcile safely on the task branch if necessary;
+6. review the final diff for unrelated reversions or duplicate implementations;
+7. obtain fresh exact-head CI when the changed paths require it.
+
+A published task branch is single-writer by default. Normal agents must use fast-forward-safe pushes and must not rewrite a published task branch merely to make their local history win over another session's newer commit.
 
 Never force-push `main`, reset it backwards, silently overwrite concurrent work, or use `ours`/`theirs` blindly to hide semantic conflicts.
 

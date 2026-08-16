@@ -63,11 +63,13 @@ Broader cross-agent inspection requires explicit owner wording such as `review P
 9. Implement only the reserved lane.
 10. Run relevant local/static/unit/smoke/preflight validation available to this lane.
 11. Review the diff for accidental reversions, unrelated edits and duplicate implementations.
-12. Create coherent request/lane-scoped commits and push the task branch.
-13. For implementation-relevant work, wait for the applicable exact current branch-head CI to reach `SUCCESS` before treating the branch as PR-ready. Do not use a new PR merely as the first diagnostic CI attempt when branch CI is available for that path set.
-14. Re-fetch `origin/main`. If it moved materially, reconcile against current `main` safely without overwriting another agent's unmerged work, push the reconciled branch, and obtain fresh required CI again.
-15. Open/update a PR targeting the intended integration branch or `main` and record exact SHA/evidence.
-16. Stop before merge unless the owner explicitly authorized this session to merge/integrate.
+12. Create coherent request/lane-scoped commits.
+13. Immediately before each push, fetch the remote ref for this task branch and compare it with the task-branch head last observed by this session. If it advanced unexpectedly, preserve/reconcile those commits rather than overwriting them.
+14. Push only a fast-forward-safe task-branch update.
+15. For implementation-relevant work, wait for the applicable exact current branch-head CI to reach `SUCCESS` before treating the branch as PR-ready. Do not use a new PR merely as the first diagnostic CI attempt when branch CI is available for that path set.
+16. Re-fetch `origin/main`. If it moved materially, reconcile against current `main` safely without overwriting another agent's unmerged work, re-check the remote task-branch head, push the reconciled branch, and obtain fresh required CI again.
+17. Open/update a PR targeting the intended integration branch or `main` and record exact SHA/evidence.
+18. Stop before merge unless the owner explicitly authorized this session to merge/integrate.
 
 An Issue plus pushed task branch is the preferred visible coordination surface before PR creation; the PR becomes the review/handoff surface once the candidate is actually reviewable.
 
@@ -110,6 +112,20 @@ Every normal agent must:
 9. never use `ours`/`theirs` blindly to hide a semantic conflict;
 10. never silently drop a concurrent commit while rebasing/merging/reapplying;
 11. record branch/commit/PR and actual validation evidence in the Issue or task handoff.
+
+### Published task-branch write safety
+
+A published `agent/**`, `recovery/**` or `integration/**` branch must not be treated like a private local branch.
+
+- The expected remote branch head is part of the session state. Record or otherwise retain the exact remote SHA observed after each successful push/fetch.
+- Immediately before a later push, fetch/read the current remote branch ref again.
+- If the remote SHA differs from the last observed remote SHA and the new commit was not created by this session, treat it as a concurrent write even when the branch name belongs to the same lane.
+- Do **not** force-push, reset the branch backwards, recreate the ref from an older local commit, or use a contents/ref API write that discards the newer remote commit.
+- Inspect/reconcile only the unexpected commits on **this same task branch**, because they are part of the already-reserved lane. Preserve both changes when compatible.
+- If the unexpected branch write makes ownership ambiguous, stop sharing that branch: update the Issue/PR handoff and continue on a new dedicated branch rather than racing for the same ref.
+- After reconciliation, the next pushed commit must descend from the current remote task-branch head. A stale local candidate is not pushable merely because its file diff still looks correct.
+
+Published task branches are therefore single-writer by default. Sharing one branch between sessions requires explicit same-lane handoff and exact remote-head reconciliation; force-push is not a coordination mechanism.
 
 When `main` moved:
 
