@@ -138,6 +138,14 @@ jobs:
             if ($releaseMetadata.prerelease -ne $true -or $releaseMetadata.draft -ne $false) {
               throw "Refusing to refresh engineering release $tag because prerelease/draft metadata is invalid."
             }
+            if (([string]$releaseMetadata.name) -ne $title) {
+              throw "Refusing to refresh engineering release $tag because release title metadata is invalid."
+            }
+            $existingReleaseBody = (([string]$releaseMetadata.body) -replace "`r`n?", "`n").Trim()
+            $expectedReleaseBody = ($notes -replace "`r`n?", "`n").Trim()
+            if ($existingReleaseBody -ne $expectedReleaseBody) {
+              throw "Refusing to refresh engineering release $tag because release notes metadata is invalid."
+            }
             gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw "Unable to refresh existing engineering prerelease $tag." }
           }
