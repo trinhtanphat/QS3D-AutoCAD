@@ -69,7 +69,14 @@ foreach ($required in @(
     '$releaseLookupExitCode = $LASTEXITCODE',
     'if ($releaseLookupExitCode -ne 0) {',
     'Unable to inspect engineering releases before mutation',
-    '$releaseExists = @($releaseTags | Where-Object { ([string]$_).Trim() -eq $tag }).Count -gt 0'
+    '$releaseExists = @($releaseTags | Where-Object { ([string]$_).Trim() -eq $tag }).Count -gt 0',
+    '$releaseMetadataJson = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/$tag"',
+    '$releaseMetadataExitCode = $LASTEXITCODE',
+    'if ($releaseMetadataExitCode -ne 0) {',
+    'Unable to inspect existing engineering release metadata before asset refresh',
+    'if (([string]$releaseMetadata.tag_name).Trim() -ne $tag) {',
+    'if ($releaseMetadata.prerelease -ne $true -or $releaseMetadata.draft -ne $false) {',
+    'Refusing to refresh engineering release'
 )) {
     if (-not $engineering.Contains($required, [StringComparison]::Ordinal)) {
         throw "Engineering release-chain regression: missing '$required'."
@@ -81,6 +88,12 @@ $releaseLookup = '$releaseTags = @(gh api --paginate "repos/$env:GITHUB_REPOSITO
 $releaseLookupExitCapture = '$releaseLookupExitCode = $LASTEXITCODE'
 $releaseLookupFailClosed = 'if ($releaseLookupExitCode -ne 0) {'
 $releaseExistsDecision = '$releaseExists = @($releaseTags | Where-Object { ([string]$_).Trim() -eq $tag }).Count -gt 0'
+$releaseExistsBranch = 'if ($releaseExists) {'
+$releaseMetadataLookup = '$releaseMetadataJson = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/$tag"'
+$releaseMetadataExitCapture = '$releaseMetadataExitCode = $LASTEXITCODE'
+$releaseMetadataFailClosed = 'if ($releaseMetadataExitCode -ne 0) {'
+$releaseMetadataTagGuard = 'if (([string]$releaseMetadata.tag_name).Trim() -ne $tag) {'
+$releaseMetadataPrereleaseGuard = 'if ($releaseMetadata.prerelease -ne $true -or $releaseMetadata.draft -ne $false) {'
 $clobberUpload = 'gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY'
 $releaseCreate = 'gh release create $tag @assets'
 $universalTagValidationIndex = $engineering.IndexOf($universalTagValidation, [StringComparison]::Ordinal)
@@ -88,6 +101,12 @@ $releaseLookupIndex = $engineering.IndexOf($releaseLookup, [StringComparison]::O
 $releaseLookupExitCaptureIndex = $engineering.IndexOf($releaseLookupExitCapture, [StringComparison]::Ordinal)
 $releaseLookupFailClosedIndex = $engineering.IndexOf($releaseLookupFailClosed, [StringComparison]::Ordinal)
 $releaseExistsDecisionIndex = $engineering.IndexOf($releaseExistsDecision, [StringComparison]::Ordinal)
+$releaseExistsBranchIndex = $engineering.IndexOf($releaseExistsBranch, [StringComparison]::Ordinal)
+$releaseMetadataLookupIndex = $engineering.IndexOf($releaseMetadataLookup, [StringComparison]::Ordinal)
+$releaseMetadataExitCaptureIndex = $engineering.IndexOf($releaseMetadataExitCapture, [StringComparison]::Ordinal)
+$releaseMetadataFailClosedIndex = $engineering.IndexOf($releaseMetadataFailClosed, [StringComparison]::Ordinal)
+$releaseMetadataTagGuardIndex = $engineering.IndexOf($releaseMetadataTagGuard, [StringComparison]::Ordinal)
+$releaseMetadataPrereleaseGuardIndex = $engineering.IndexOf($releaseMetadataPrereleaseGuard, [StringComparison]::Ordinal)
 $clobberUploadIndex = $engineering.IndexOf($clobberUpload, [StringComparison]::Ordinal)
 $releaseCreateIndex = $engineering.IndexOf($releaseCreate, [StringComparison]::Ordinal)
 if (
@@ -96,16 +115,28 @@ if (
     $releaseLookupExitCaptureIndex -lt 0 -or
     $releaseLookupFailClosedIndex -lt 0 -or
     $releaseExistsDecisionIndex -lt 0 -or
+    $releaseExistsBranchIndex -lt 0 -or
+    $releaseMetadataLookupIndex -lt 0 -or
+    $releaseMetadataExitCaptureIndex -lt 0 -or
+    $releaseMetadataFailClosedIndex -lt 0 -or
+    $releaseMetadataTagGuardIndex -lt 0 -or
+    $releaseMetadataPrereleaseGuardIndex -lt 0 -or
     $clobberUploadIndex -lt 0 -or
     $releaseCreateIndex -lt 0 -or
     $universalTagValidationIndex -ge $releaseLookupIndex -or
     $releaseLookupIndex -ge $releaseLookupExitCaptureIndex -or
     $releaseLookupExitCaptureIndex -ge $releaseLookupFailClosedIndex -or
     $releaseLookupFailClosedIndex -ge $releaseExistsDecisionIndex -or
-    $releaseExistsDecisionIndex -ge $clobberUploadIndex -or
+    $releaseExistsDecisionIndex -ge $releaseExistsBranchIndex -or
+    $releaseExistsBranchIndex -ge $releaseMetadataLookupIndex -or
+    $releaseMetadataLookupIndex -ge $releaseMetadataExitCaptureIndex -or
+    $releaseMetadataExitCaptureIndex -ge $releaseMetadataFailClosedIndex -or
+    $releaseMetadataFailClosedIndex -ge $releaseMetadataTagGuardIndex -or
+    $releaseMetadataTagGuardIndex -ge $releaseMetadataPrereleaseGuardIndex -or
+    $releaseMetadataPrereleaseGuardIndex -ge $clobberUploadIndex -or
     $releaseExistsDecisionIndex -ge $releaseCreateIndex
 ) {
-    throw 'Engineering release integrity regression: tag validation plus a successful read-only release lookup must precede either release refresh or release creation mutation.'
+    throw 'Engineering release integrity regression: tag validation, successful release lookup and existing-release prerelease metadata validation must precede release mutation.'
 }
 if ($engineering.Contains('gh release view $tag', [StringComparison]::Ordinal)) {
     throw 'Engineering release lookup regression: gh release view exit status must not be used to infer release absence because lookup failures must fail closed.'
