@@ -124,6 +124,9 @@ jobs:
       - name: Release security policy guards
         shell: pwsh
         run: ./scripts/validate-release-policy.ps1
+      - name: Main CI and engineering release chain guards
+        shell: pwsh
+        run: ./scripts/validate-main-ci-release-chain.ps1
       - name: Native acceptance contract guards
         shell: pwsh
         run: ./scripts/validate-native-acceptance-contract.ps1
