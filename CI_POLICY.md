@@ -19,6 +19,8 @@ Pull requests targeting `main` remain path-filtered, and manual dispatch remains
 
 For task/integration branches, the classifier skips the heavy build/test/package job when the complete branch diff from current `main` is CI-neutral-only. For **every push to `main`**, the classifier must force the heavy job to run regardless of changed paths. This guarantees an exact-main build/test/package artifact for every landed SHA and keeps the downstream engineering prerelease chain from being silently skipped by docs-only merges.
 
+CI concurrency must preserve that guarantee. Stale task/PR runs may be canceled to save runner capacity, but a newer push to `main` must **not** cancel an already-running `main` CI. Back-to-back landed SHAs queue and finish independently so each can upload its exact engineering artifact and trigger its own downstream prerelease.
+
 Every required run validates its own exact checkout SHA. Multiple agents may share the workflow definition, but each task branch has independent CI evidence.
 
 A GitHub Issue is coordination only; it has no source tree to build. CI evidence belongs to the branch/PR SHA referenced by the issue.
