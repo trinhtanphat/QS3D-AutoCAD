@@ -26,6 +26,20 @@ foreach ($required in @(
     }
 }
 
+$concurrencyStart = $ci.IndexOf("concurrency:", [StringComparison]::Ordinal)
+$jobsStart = $ci.IndexOf("jobs:", [StringComparison]::Ordinal)
+if ($concurrencyStart -lt 0 -or $jobsStart -le $concurrencyStart) {
+    throw 'CI concurrency regression: unable to isolate concurrency block.'
+}
+$concurrencyBlock = $ci.Substring($concurrencyStart, $jobsStart - $concurrencyStart)
+$mainSafeCancellation = 'cancel-in-progress: ${{ !(github.event_name == ''push'' && github.ref_name == ''main'') }}'
+if (-not $concurrencyBlock.Contains($mainSafeCancellation, [StringComparison]::Ordinal)) {
+    throw 'Main CI concurrency regression: task/PR runs may be canceled when stale, but push runs on main must never be canceled by a newer main SHA.'
+}
+if ($concurrencyBlock.Contains('cancel-in-progress: true', [StringComparison]::Ordinal)) {
+    throw 'Main CI concurrency regression: unconditional cancel-in-progress would drop earlier landed main CI/release evidence.'
+}
+
 foreach ($required in @(
     'Classify heavy CI requirement',
     'if [[ "$branch" == "main" ]]; then',
@@ -54,4 +68,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Main exact-CI and engineering prerelease chain guards passed.'
+Write-Host 'Main exact-CI, non-canceling concurrency and engineering prerelease chain guards passed.'
