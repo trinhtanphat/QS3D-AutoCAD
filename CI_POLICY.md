@@ -8,14 +8,16 @@ Read `docs/MAIN-WRITE-AUTHORIZATION.md`, `docs/AI-SESSION-WORKFLOW.md` and `docs
 
 ## Per-agent task CI
 
-`.github/workflows/ci.yml` is the canonical repository-safe validation workflow. It runs for implementation-relevant changes on:
+`.github/workflows/ci.yml` is the canonical repository-safe validation workflow. A lightweight classification job is created for pushes on:
 
 - `agent/**`;
 - `recovery/**`;
 - `integration/**`;
-- pull requests targeting `main`;
-- pushes to `main`;
-- manual dispatch when needed and explicitly permitted.
+- `main`.
+
+Pull requests targeting `main` remain path-filtered, and manual dispatch remains available when explicitly permitted.
+
+For task/integration branches, the classifier skips the heavy build/test/package job when the complete branch diff from current `main` is CI-neutral-only. For **every push to `main`**, the classifier must force the heavy job to run regardless of changed paths. This guarantees an exact-main build/test/package artifact for every landed SHA and keeps the downstream engineering prerelease chain from being silently skipped by docs-only merges.
 
 Every required run validates its own exact checkout SHA. Multiple agents may share the workflow definition, but each task branch has independent CI evidence.
 
@@ -23,11 +25,13 @@ A GitHub Issue is coordination only; it has no source tree to build. CI evidence
 
 ## CI-neutral-only exemption
 
-The full build/test workflow is intentionally skipped only when **all** changed paths are limited to the ignore set configured in `.github/workflows/ci.yml`, including documentation/Markdown and non-executable housekeeping such as `.gitignore`, `.gitattributes`, `.editorconfig`, license/notice files and issue/PR templates.
+The heavy build/test/package job may be skipped on non-`main` task/integration branches when **all** changed paths are limited to the repository's CI-neutral set, including documentation/Markdown and non-executable housekeeping such as `.gitignore`, `.gitattributes`, `.editorconfig`, license/notice files and issue/PR templates. Docs-only PRs to `main` may also remain excluded by the `pull_request.paths-ignore` trigger.
 
-This exemption is path-based, not commit-message-based. A `docs:` or `chore:` commit still requires normal CI when it touches source, tests, project/build files, dependencies, scripts, workflows, installer, packaging, signing/runtime-affecting configuration, release machinery or any other non-ignored path. Mixed changes always require normal CI.
+This exemption is path-based, not commit-message-based. A `docs:` or `chore:` commit still requires normal heavy CI when it touches source, tests, project/build files, dependencies, scripts, workflows, installer, packaging, signing/runtime-affecting configuration, release machinery or any other non-neutral path. Mixed changes always require normal heavy CI.
 
-For CI-neutral-only work, record the path classification and any relevant lightweight validation instead of manufacturing an unrelated build/release run.
+**There is no heavy-CI exemption after landing on `main`.** Every new `main` SHA must receive full exact-main CI so the verified engineering artifact exists and `engineering-release.yml` can publish the corresponding test prerelease after success.
+
+For CI-neutral-only branch work, record the path classification and any relevant lightweight validation instead of manufacturing unrelated branch build work. After an authorized merge, wait for the mandatory exact-main heavy CI and downstream engineering publication evidence before claiming the landed release chain healthy.
 
 ## Mandatory exact-head completion gate
 
@@ -81,12 +85,13 @@ READY_LANES
   -> CI_GREEN
   -> INTEGRATION REVIEW
   -> ONE AUTHORIZED FINAL MERGE TO MAIN
-  -> EXACT-CURRENT-MAIN CI
-  -> CI_GREEN
+  -> EXACT-CURRENT-MAIN FULL CI
+  -> CI_GREEN + VERIFIED ENGINEERING ARTIFACT
+  -> ENGINEERING PRERELEASE PUBLISHED
   -> ALL_DONE
 ```
 
-CI-neutral-only work follows the same branch/PR authorization path without manufacturing a full build-CI requirement.
+CI-neutral-only work follows the same branch/PR authorization path without requiring the heavy branch job, but after landing it still enters the mandatory exact-current-main full-CI and engineering-publication path.
 
 ## Integration and recovery
 
@@ -98,12 +103,13 @@ Never force-push `main`, reset it backwards, silently overwrite concurrent work,
 
 ## Release/native boundary
 
-Repository CI proves source/build/test/package contracts only. It is not licensed native AutoCAD runtime proof.
+Repository CI proves source/build/test/package contracts only. A successful push CI on exact `main` also produces the unsigned engineering candidate consumed by `engineering-release.yml`; the downstream test prerelease is still not licensed native AutoCAD runtime proof.
 
 - AutoCAD 2021 native qualification uses its real legacy host/runtime lane when required.
 - AutoCAD 2025/2026/2027 native qualification remains separate when required.
 - Authenticode production signing and real commercial credentials/services remain separate release gates.
 - Engineering package artifacts are not production/native PASS without their exact acceptance evidence.
+- Production `v*` releases remain separately gated by native acceptance and signing; they are not created merely because `main` CI succeeds.
 - Unavailable native/local evidence must never be claimed as PASS.
 
 ## Completion/session-close gate
@@ -121,6 +127,6 @@ A lane can be complete with `MERGED TO MAIN: NO` when the owner requested implem
 
 ## GitHub protection
 
-Repository policy should be backed by branch protection/rulesets for `main` when available: require the intended PR/integration path, block force-push and deletion, and require stable implementation status checks where appropriate. If docs-only PRs are exempt from full CI, rulesets should account for that rather than forcing unrelated build work.
+Repository policy should be backed by branch protection/rulesets for `main` when available: require the intended PR/integration path, block force-push and deletion, and require stable implementation status checks where appropriate. Docs-only PRs may remain exempt from heavy PR CI, but every landed `main` SHA is still required by repository workflow policy to run full exact-main CI afterward.
 
 Markdown policy does not itself configure repository settings. When protection state matters, verify the effective GitHub configuration rather than assuming policy text proves enforcement.
