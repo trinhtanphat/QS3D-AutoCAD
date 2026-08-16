@@ -149,14 +149,17 @@ The owner prefers coherent commits scoped to the request/lane.
 
 The repository uses `.github/workflows/ci.yml`; agents do not create one workflow per branch.
 
-For implementation-relevant paths:
+For implementation-relevant paths, the **current workflow triggers are exact and asymmetric**:
 
-- push to `agent/**` / `recovery/**` validates the exact branch tree;
-- a PR targeting `main` or an authorized integration branch validates the current candidate according to repository workflow/protection settings;
-- push to `integration/**` validates the exact combined tree assembled by an authorized coordinator;
+- push to `agent/**` / `recovery/**` validates the exact task-branch tree;
+- a pull request triggers this shared CI only when its base is `main`;
+- a pull request whose base is `integration/**` does **not** currently trigger `.github/workflows/ci.yml`; do not wait for or claim a nonexistent PR-to-integration CI run;
+- push to `integration/**` validates the exact combined tree assembled by an authorized coordinator and is the required shared-CI evidence for that integration-branch candidate;
 - push to `main` validates the exact landed tree when the workflow applies.
 
-A green agent branch proves only the exact tested branch SHA. A green PR candidate proves only that candidate. A green integration branch proves only the combined integration tree. Exact-main evidence proves only the landed SHA it actually tested.
+A green agent branch proves only the exact tested branch SHA. A green PR-to-`main` candidate proves only that candidate. A green `integration/**` push proves only the exact combined integration tree. Exact-main evidence proves only the landed SHA it actually tested.
+
+If repository workflow triggers change later, update this policy from the actual `.github/workflows/ci.yml` behavior rather than assuming PR-to-integration validation exists.
 
 CI-neutral-only work may legitimately have no heavy branch CI when every changed path is in the ignore set documented by `CI_POLICY.md` / `.github/workflows/ci.yml`. Record that classification instead of manufacturing an unrelated run.
 
