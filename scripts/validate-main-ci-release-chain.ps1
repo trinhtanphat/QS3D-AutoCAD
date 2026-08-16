@@ -62,20 +62,29 @@ foreach ($required in @(
     'No successful push CI exists for current main SHA',
     'QS3D-AutoCAD-native-candidate-$env:SOURCE_SHA',
     'Create git tag and GitHub prerelease',
-    '$existingTagSha = (gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --jq ''.object.sha'').Trim().ToLowerInvariant()',
-    'Existing engineering tag target mismatch before asset refresh'
+    '$tagRefsJson = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/$tag"',
+    '$exactTagRef = @($tagRefs | Where-Object { $_.ref -eq "refs/tags/$tag" }) | Select-Object -First 1',
+    'Existing engineering tag target mismatch before release mutation'
 )) {
     if (-not $engineering.Contains($required, [StringComparison]::Ordinal)) {
         throw "Engineering release-chain regression: missing '$required'."
     }
 }
 
-$existingTagValidation = '$existingTagSha = (gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --jq ''.object.sha'').Trim().ToLowerInvariant()'
+$universalTagValidation = '$tagRefsJson = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/$tag"'
 $clobberUpload = 'gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY'
-$existingTagValidationIndex = $engineering.IndexOf($existingTagValidation, [StringComparison]::Ordinal)
+$releaseCreate = 'gh release create $tag @assets'
+$universalTagValidationIndex = $engineering.IndexOf($universalTagValidation, [StringComparison]::Ordinal)
 $clobberUploadIndex = $engineering.IndexOf($clobberUpload, [StringComparison]::Ordinal)
-if ($existingTagValidationIndex -lt 0 -or $clobberUploadIndex -lt 0 -or $existingTagValidationIndex -ge $clobberUploadIndex) {
-    throw 'Engineering release integrity regression: an existing engineering tag must be validated against SOURCE_SHA before any asset clobber mutation.'
+$releaseCreateIndex = $engineering.IndexOf($releaseCreate, [StringComparison]::Ordinal)
+if (
+    $universalTagValidationIndex -lt 0 -or
+    $clobberUploadIndex -lt 0 -or
+    $releaseCreateIndex -lt 0 -or
+    $universalTagValidationIndex -ge $clobberUploadIndex -or
+    $universalTagValidationIndex -ge $releaseCreateIndex
+) {
+    throw 'Engineering release integrity regression: an exact pre-existing engineering tag must be validated against SOURCE_SHA before either release refresh or release creation mutates assets.'
 }
 
 Write-Host 'Main exact-CI, non-canceling concurrency and fail-closed engineering prerelease chain guards passed.'

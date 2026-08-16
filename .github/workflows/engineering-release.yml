@@ -106,12 +106,21 @@ jobs:
             'artifacts/SHA256SUMS.txt'
           )
 
+          $tagRefsJson = gh api "repos/$env:GITHUB_REPOSITORY/git/matching-refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to inspect engineering tag ref $tag before release mutation."
+          }
+          $tagRefs = $tagRefsJson | ConvertFrom-Json
+          $exactTagRef = @($tagRefs | Where-Object { $_.ref -eq "refs/tags/$tag" }) | Select-Object -First 1
+          if ($null -ne $exactTagRef) {
+            $existingTagSha = ([string]$exactTagRef.object.sha).Trim().ToLowerInvariant()
+            if ($existingTagSha -ne $env:SOURCE_SHA) {
+              throw "Existing engineering tag target mismatch before release mutation: expected $env:SOURCE_SHA, got $existingTagSha"
+            }
+          }
+
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
-            $existingTagSha = (gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha').Trim().ToLowerInvariant()
-            if ($existingTagSha -ne $env:SOURCE_SHA) {
-              throw "Existing engineering tag target mismatch before asset refresh: expected $env:SOURCE_SHA, got $existingTagSha"
-            }
             gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw "Unable to refresh existing engineering prerelease $tag." }
           }
