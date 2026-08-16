@@ -7,17 +7,6 @@ on:
       - "agent/**"
       - "recovery/**"
       - "integration/**"
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
-      - ".gitignore"
-      - ".gitattributes"
-      - ".editorconfig"
-      - "LICENSE*"
-      - "NOTICE*"
-      - ".github/ISSUE_TEMPLATE/**"
-      - ".github/PULL_REQUEST_TEMPLATE*"
-      - ".github/PULL_REQUEST_TEMPLATE/**"
   pull_request:
     branches:
       - main
@@ -42,7 +31,60 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      run_heavy: ${{ steps.classify.outputs.run_heavy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Classify heavy CI requirement
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          event='${{ github.event_name }}'
+          branch='${{ github.ref_name }}'
+
+          if [[ "$event" != "push" ]]; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "Heavy CI required for event: $event"
+            exit 0
+          fi
+
+          if [[ "$branch" == "main" ]]; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "Heavy CI is mandatory for every push to main so exact-main artifacts and engineering release publication cannot be skipped."
+            exit 0
+          fi
+
+          git fetch origin main --no-tags
+          base="$(git merge-base HEAD origin/main)"
+          mapfile -t changed < <(git diff --name-only "$base" HEAD)
+          heavy=false
+
+          for path in "${changed[@]}"; do
+            case "$path" in
+              docs/*|*.md|.gitignore|.gitattributes|.editorconfig|LICENSE*|NOTICE*|.github/ISSUE_TEMPLATE/*|.github/PULL_REQUEST_TEMPLATE*)
+                ;;
+              *)
+                echo "Implementation-relevant path requires heavy CI: $path"
+                heavy=true
+                break
+                ;;
+            esac
+          done
+
+          echo "run_heavy=$heavy" >> "$GITHUB_OUTPUT"
+          if [[ "$heavy" == "false" ]]; then
+            echo "CI-neutral task branch: heavy build/test/package job skipped."
+          fi
+
   core-host-and-guards:
+    needs: classify
+    if: needs.classify.outputs.run_heavy == 'true'
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
@@ -82,6 +124,9 @@ jobs:
       - name: Release security policy guards
         shell: pwsh
         run: ./scripts/validate-release-policy.ps1
+      - name: Main CI and engineering release chain guards
+        shell: pwsh
+        run: ./scripts/validate-main-ci-release-chain.ps1
       - name: Native acceptance contract guards
         shell: pwsh
         run: ./scripts/validate-native-acceptance-contract.ps1
