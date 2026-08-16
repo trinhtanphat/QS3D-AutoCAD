@@ -126,6 +126,18 @@ jobs:
           }
           $releaseExists = @($releaseTags | Where-Object { ([string]$_).Trim() -eq $tag }).Count -gt 0
           if ($releaseExists) {
+            $releaseMetadataJson = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/$tag"
+            $releaseMetadataExitCode = $LASTEXITCODE
+            if ($releaseMetadataExitCode -ne 0) {
+              throw "Unable to inspect existing engineering release metadata before asset refresh for $tag."
+            }
+            $releaseMetadata = $releaseMetadataJson | ConvertFrom-Json
+            if (([string]$releaseMetadata.tag_name).Trim() -ne $tag) {
+              throw "Existing engineering release tag metadata mismatch before asset refresh: expected $tag, got $($releaseMetadata.tag_name)"
+            }
+            if ($releaseMetadata.prerelease -ne $true -or $releaseMetadata.draft -ne $false) {
+              throw "Refusing to refresh engineering release $tag because prerelease/draft metadata is invalid."
+            }
             gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw "Unable to refresh existing engineering prerelease $tag." }
           }
