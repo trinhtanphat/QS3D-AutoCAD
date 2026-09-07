@@ -111,7 +111,23 @@ Use the stable check ids from `native-acceptance/required-checks.json`. Each non
 
 Use `fail` for an observed defect and `blocked` when the environment cannot execute the check. Do not mark a check pass merely because hosted CI compiled related source.
 
-Required coverage includes installer exactness, bundle autoload, palette startup, runtime identity, all modelling/edit/BOQ flows, JIG previews/dimensions/cancel safety, browser synchronization, Level/Grid dependency behavior, undo/redo, save/reopen persistence, restart behavior, upgrade/uninstall, artifact provenance, and Ribbon/native visual gates.
+Required coverage includes installer exactness, bundle autoload, palette startup, runtime identity, all modelling/edit/BOQ flows, JIG previews/dimensions/cancel safety, browser synchronization, Level/Grid dependency behavior, undo/redo, save/reopen persistence, restart behavior, upgrade/uninstall, artifact provenance, Ribbon/native visual gates, and every required MEP surface below.
+
+### Required MEP acceptance rows
+
+For every host session being qualified, record all nine MEP rows explicitly; none may be inferred from hosted MEP source guards:
+
+- `mep_takeoff_recognition_quantity` — run `QS3DMEPTAKEOFF` on representative supported MEP geometry and verify recognition, quantity/unit parity, plus fail-closed unsupported or ambiguous handling.
+- `mep_clash_classification` — run `QS3DMEPCLASH` on representative hard and clearance cases and verify deterministic pair/type/severity/geometry classification.
+- `mep_clash_locate_selection_safety` — run `QS3DMEPCLASHLOCATE` for an exact pair and verify PICKFIRST selection; stale, unknown, ambiguous or partially resolved references must fail closed without replacing prior valid selection or review state.
+- `mep_exact_clash_review` — run `QS3DMEPEXACTCLASH` and compare native-geometry clash results with representative known cases.
+- `mep_zoom_selection_review` — run `QS3DMEPZOOMSELECTION` and verify only the intended visible/selected objects in the owning drawing are affected.
+- `mep_review_palette_lifecycle` — run `QS3DMEPREVIEW`, exercise the modeless review palette, and verify focus/lifecycle behavior and active-document affinity.
+- `mep_recognition_profile_persistence` — edit/save a recognition profile, restart AutoCAD, verify persistence, and verify invalid/corrupt profile input fails closed within documented bounds.
+- `mep_multidwg_document_affinity` — with multiple drawings open, verify takeoff, clash, Locate, review and profile operations do not leak selection/results across DWGs.
+- `mep_readonly_nonmutation` — verify analysis/review/Locate/profile-read paths do not create or mutate unrelated DWG entities, QS3D XData/XRecords, semantic project state, or unintended sidecar/project state.
+
+Use `scripts/record-native-result.ps1` for each row with concrete notes from the licensed host session. A fully passing evidence file must contain every required check exactly once; leaving a MEP row pending, blocked, failed or absent causes final validation to reject the session.
 
 ## Ribbon acceptance procedure
 
