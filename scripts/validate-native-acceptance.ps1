@@ -12,7 +12,8 @@ $repo = Split-Path -Parent $PSScriptRoot
 $verifyArtifacts = Join-Path $repo 'scripts\verify-artifacts.ps1'
 $provenancePath = Join-Path $repo 'artifacts\RELEASE-PROVENANCE.json'
 $requiredChecksPath = Join-Path $repo 'native-acceptance\required-checks.json'
-$supportedGenerations = @('2021','2025','2026','2027')
+$legacyGenerations = @('2021','2022','2023','2024')
+$supportedGenerations = @('2021','2022','2023','2024','2025','2026','2027')
 
 $RequiredGenerations = @($RequiredGenerations | ForEach-Object { [string]$_ } | Select-Object -Unique)
 if ($RequiredGenerations.Count -eq 0) { throw 'At least one required AutoCAD generation must be specified.' }
@@ -130,10 +131,17 @@ foreach ($path in $EvidencePaths) {
     if ($generation -notin $RequiredGenerations) {
         throw "${fileName}: AutoCAD generation '$generation' was not requested for this validation."
     }
-    $expectedRuntime = switch ($generation) {
-        '2021' { '.NET Framework 4.8' }
-        '2027' { '.NET 10' }
-        default { '.NET 8' }
+    $expectedRuntime = if ($generation -in $legacyGenerations) {
+        '.NET Framework 4.8'
+    }
+    elseif ($generation -eq '2026') {
+        '.NET 8 or .NET 10'
+    }
+    elseif ($generation -eq '2027') {
+        '.NET 10'
+    }
+    else {
+        '.NET 8'
     }
     if ([string]$evidence.host.expectedRuntimeFamily -ne $expectedRuntime) {
         throw "${fileName}: expected runtime family must be $expectedRuntime for AutoCAD $generation."
@@ -144,12 +152,17 @@ foreach ($path in $EvidencePaths) {
     if ([string]$evidence.host.observedClrVersion -notmatch '^(?<major>\d+)\.') {
         throw "${fileName}: observed CLR version is malformed: $($evidence.host.observedClrVersion)."
     }
-    $expectedMajor = switch ($generation) {
-        '2021' { 4 }
-        '2027' { 10 }
-        default { 8 }
+    $allowedMajors = switch ($generation) {
+        '2021' { @(4) }
+        '2022' { @(4) }
+        '2023' { @(4) }
+        '2024' { @(4) }
+        '2025' { @(8) }
+        '2026' { @(8, 10) }
+        '2027' { @(10) }
+        default { @() }
     }
-    if ([int]$Matches.major -ne $expectedMajor) {
+    if ([int]$Matches.major -notin $allowedMajors) {
         throw "${fileName}: observed CLR $($evidence.host.observedClrVersion) does not match expected $expectedRuntime."
     }
     if ([string]::IsNullOrWhiteSpace([string]$evidence.host.productName) -or [string]$evidence.host.productName -notmatch 'AutoCAD') {

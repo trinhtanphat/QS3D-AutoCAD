@@ -173,7 +173,7 @@ if (-not $referenceManagerSource.Contains('item.Metadata.Id != excludeId', [Stri
 $components = @($xml.ApplicationPackage.Components)
 $entries = @($components.ComponentEntry)
 if ($entries.Count -ne 3) { throw 'PackageContents.xml must contain three runtime-specific component entries.' }
-if ($entries.ModuleName -notcontains './Contents/2021/QS3D.AutoCAD.dll') { throw 'Missing AutoCAD 2021 bundle payload.' }
+if ($entries.ModuleName -notcontains './Contents/2021/QS3D.AutoCAD.dll') { throw 'Missing AutoCAD 2021-2024 legacy bundle payload.' }
 if ($entries.ModuleName -notcontains './Contents/2025-2026/QS3D.AutoCAD.dll') { throw 'Missing AutoCAD 2025-2026 bundle payload.' }
 if ($entries.ModuleName -notcontains './Contents/2027/QS3D.AutoCAD.dll') { throw 'Missing AutoCAD 2027 bundle payload.' }
 if (@($entries | Where-Object { $_.LoadReasons -ne 'LoadOnCommandInvocation' }).Count -ne 0) { throw 'All .NET hosts must use command-invocation autoload.' }
@@ -187,10 +187,14 @@ foreach ($entry in $entries) {
     }
 }
 
+$legacyEntry = $entries | Where-Object { $_.ModuleName -eq './Contents/2021/QS3D.AutoCAD.dll' }
+if ($null -eq $legacyEntry -or $legacyEntry.AppName -ne 'QS3D AutoCAD 2021-2024') {
+    throw 'Legacy bundle payload must be labelled QS3D AutoCAD 2021-2024.'
+}
 $net48 = $components | Where-Object { $_.RuntimeRequirements.SeriesMin -eq 'R24.0' }
 $net8 = $components | Where-Object { $_.RuntimeRequirements.SeriesMin -eq 'R25.0' }
 $net10 = $components | Where-Object { $_.RuntimeRequirements.SeriesMin -eq 'R26.0' }
-if ($null -eq $net48 -or $net48.RuntimeRequirements.SeriesMax -ne 'R24.0') { throw 'AutoCAD 2021 runtime range must be R24.0.' }
+if ($null -eq $net48 -or $net48.RuntimeRequirements.SeriesMax -ne 'R24.3') { throw 'AutoCAD 2021-2024 legacy runtime range must be exactly R24.0-R24.3.' }
 if ($null -eq $net8 -or $net8.RuntimeRequirements.SeriesMax -ne 'R25.1') { throw 'AutoCAD 2025-2026 runtime range must be R25.0-R25.1.' }
 if ($null -eq $net10 -or $net10.RuntimeRequirements.SeriesMax -ne 'R26.0') { throw 'AutoCAD 2027 runtime range must be R26.0.' }
 

@@ -4,14 +4,17 @@ QS3D AutoCAD is the Autodesk AutoCAD host for QS3D structural modelling and quan
 
 ## Supported host generations
 
-- AutoCAD 2021: legacy .NET Framework 4.8 host payload compiled against Autodesk-owned `AutoCAD.NET` 24.0.0 and loaded from bundle series `R24.0`
-- AutoCAD 2025–2026: .NET 8 host payload compiled against Autodesk-owned `AutoCAD.NET` 25.0.1
+- AutoCAD 2021–2024: one legacy .NET Framework 4.8 host payload compiled against Autodesk-owned `AutoCAD.NET` 24.0.0 and loaded from bundle series `R24.0-R24.3`
+- AutoCAD 2025: .NET 8 host payload compiled against Autodesk-owned `AutoCAD.NET` 25.0.1
+- AutoCAD 2026: the same .NET 8-targeted payload family; native acceptance records the real observed host CLR because AutoCAD 2026.1.2+ transitions the host to .NET 10
 - AutoCAD 2027: .NET 10 host payload compiled against Autodesk-owned `AutoCAD.NET` 26.0.0
 - Autodesk-specific code is isolated from the host-neutral QS3D Core
 - deployment uses an AutoCAD `.bundle`
 - the release pipeline produces both a portable bundle zip and a self-contained `QS3D-AutoCAD-<version>-Setup.exe`
 
-The AutoCAD 2021 payload exists so installations on the R24.0 host can discover and lazy-load QS3D instead of receiving `Unknown command "QS3D"`. It is built and packaged independently from the modern .NET 8/.NET 10 payloads; adding legacy support does not downgrade the 2025–2027 binaries.
+The legacy payload is built once against the AutoCAD 2021 managed SDK and reused for AutoCAD 2021, 2022, 2023 and 2024. Autodesk's managed compatibility matrix explicitly supports the older R24.x managed SDKs on the later R24.x hosts, so QS3D does not duplicate four equivalent net48 binaries. The legacy payload is built and packaged independently from the modern .NET 8/.NET 10 payloads; adding 2022–2024 discovery does not downgrade the 2025–2027 binaries.
+
+AutoCAD 2026 requires an extra native-runtime boundary: the shipped QS3D 2026 payload remains targeted to .NET 8, while a real AutoCAD 2026 host may report CLR major 8 or 10 depending on update level. Hosted CI validates packaging/source compatibility only. It never substitutes for loading the exact candidate in the actual AutoCAD 2026 installation and recording the observed CLR/native checks.
 
 ## Implemented modelling workflow
 
@@ -54,13 +57,13 @@ The JIG/Grid-manager implementation is source-complete but remains subject to re
 
 The Ribbon bridge deliberately does **not** compile against `AdWindows.dll` or `Autodesk.Windows`. Hosted CI cannot substitute or mock that native AutoCAD UI dependency. `QS3DRIBBON` resolves the loaded AutoCAD UI assembly/types at runtime, builds an idempotent QS3D tab with Model/References/Review panels, and fails softly so the palette/model commands remain usable if the Ribbon API is unavailable.
 
-A successful hosted compile only proves the bridge source remains host-safe. `ribbon_surface` and `ribbon_visual_qa` remain native acceptance gates; the legacy AutoCAD 2021 lane can be qualified separately, while the default production qualification matrix remains AutoCAD 2025, 2026 and 2027 until release policy is intentionally changed.
+A successful hosted compile only proves the bridge source remains host-safe. `ribbon_surface` and `ribbon_visual_qa` remain native acceptance gates; the legacy AutoCAD 2021–2024 matrix can be qualified separately, while the default production qualification matrix remains AutoCAD 2025, 2026 and 2027 until release policy is intentionally changed.
 
 ## Build and delivery
 
-GitHub `CI` builds and smoke-tests the host-neutral Core, compiles AutoCAD 2021, 2025–2026 and 2027 host payloads using Autodesk-owned packages, validates command/bundle architecture, packages an engineering release candidate, and verifies release provenance/checksums end to end. Autodesk assemblies are compile-time dependencies only and are excluded from QS3D release payloads.
+GitHub `CI` builds and smoke-tests the host-neutral Core, compiles the one AutoCAD 2021–2024 legacy net48 payload, the AutoCAD 2025–2026 net8 payload and the AutoCAD 2027 net10 payload using Autodesk-owned packages, validates command/bundle architecture, packages an engineering release candidate, and verifies release provenance/checksums end to end. Autodesk assemblies are compile-time dependencies only and are excluded from QS3D release payloads.
 
-CI also validates the native-acceptance tooling itself and proves that synthetic evidence with `pending` checks is rejected for both the default modern matrix and the separate AutoCAD 2021 lane. Hosted CI never creates a native PASS result.
+CI also validates the native-acceptance tooling itself and proves that synthetic evidence with `pending` checks is rejected for both the default modern matrix and the separate AutoCAD 2021–2024 legacy matrix. Hosted CI never creates a native PASS result.
 
 `./scripts/package.ps1 -Version <version>` creates:
 
@@ -69,7 +72,7 @@ CI also validates the native-acceptance tooling itself and proves that synthetic
 - `artifacts/RELEASE-PROVENANCE.json`
 - `artifacts/SHA256SUMS.txt`
 
-`RELEASE-PROVENANCE.json` records the exact source commit, version, three runtime families, signing state, artifact sizes and SHA-256 hashes. `./scripts/verify-artifacts.ps1 -Version <version>` independently checks that contract.
+`RELEASE-PROVENANCE.json` records the exact source commit, version, three runtime payload families, signing state, artifact sizes and SHA-256 hashes. `./scripts/verify-artifacts.ps1 -Version <version>` independently checks that contract.
 
 The setup executable embeds the bundle and installs it to the all-users Autodesk `ApplicationPlugins` directory. Install/upgrade is staged and rollback-safe; Setup refuses install, upgrade or `--uninstall` while AutoCAD is running.
 
@@ -77,6 +80,6 @@ Tag publication is fail-closed: the tagged SHA must be on `main`, must exactly e
 
 The current plugin sends no telemetry or production licensing calls. See `docs/PRIVACY.md` for the current privacy posture and `docs/RELEASE-SECURITY.md` for release/signing gates.
 
-A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD. The default formal release matrix remains AutoCAD 2025/2026/2027; AutoCAD 2021 uses a separate legacy evidence lane and must also be tested in the actual 2021 host before it can be called native-qualified. See `docs/NATIVE-ACCEPTANCE.md` for the exact evidence workflow.
+A green source build is not a native runtime qualification. The exact generated bundle still requires acceptance testing in real AutoCAD. The default formal release matrix remains AutoCAD 2025/2026/2027. AutoCAD 2021/2022/2023/2024 use a separate legacy evidence matrix and each tested host must have real-host evidence before it can be called native-qualified. AutoCAD 2026 evidence must also record the concrete CLR observed after QS3D loads so the 2026.1.2+ .NET 10 host transition is not hidden. See `docs/NATIVE-ACCEPTANCE.md` for the exact evidence workflow.
 
 See `docs/IMPLEMENTATION-PLAN.md` and `docs/BUILD.md` for architecture, build and native acceptance gates.

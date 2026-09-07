@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$Version,
-    [Parameter(Mandatory = $true)][ValidateSet('2021','2025','2026','2027')][string]$HostGeneration,
+    [Parameter(Mandatory = $true)][ValidateSet('2021','2022','2023','2024','2025','2026','2027')][string]$HostGeneration,
     [Parameter(Mandatory = $true)][string]$AcadExe,
     [string]$Operator = $env:USERNAME,
     [string]$Notes = '',
@@ -14,6 +14,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $verifyScript = Join-Path $repo 'scripts\verify-artifacts.ps1'
 $requiredChecksPath = Join-Path $repo 'native-acceptance\required-checks.json'
 $provenancePath = Join-Path $repo 'artifacts\RELEASE-PROVENANCE.json'
+$legacyGenerations = @('2021','2022','2023','2024')
 
 if ([string]::IsNullOrWhiteSpace($Operator)) {
     throw 'Operator name is required for native acceptance evidence.'
@@ -34,24 +35,40 @@ if ($requiredChecks.schemaVersion -ne 1 -or @($requiredChecks.checks).Count -eq 
     throw 'Native acceptance required-check contract is invalid.'
 }
 
-$expectedRuntime = switch ($HostGeneration) {
-    '2021' { '.NET Framework 4.8' }
-    '2027' { '.NET 10' }
-    default { '.NET 8' }
+$payloadRuntime = if ($HostGeneration -in $legacyGenerations) {
+    '.NET Framework 4.8'
+}
+elseif ($HostGeneration -eq '2027') {
+    '.NET 10'
+}
+else {
+    '.NET 8'
+}
+$expectedHostRuntime = if ($HostGeneration -in $legacyGenerations) {
+    '.NET Framework 4.8'
+}
+elseif ($HostGeneration -eq '2026') {
+    '.NET 8 or .NET 10'
+}
+elseif ($HostGeneration -eq '2027') {
+    '.NET 10'
+}
+else {
+    '.NET 8'
 }
 $matrixMatch = @($provenance.runtimeMatrix) | Where-Object {
-    if ($HostGeneration -eq '2021') {
-        $_.autoCAD -eq '2021' -and $_.managedRuntime -eq $expectedRuntime
+    if ($HostGeneration -in $legacyGenerations) {
+        $_.autoCAD -eq '2021' -and $_.managedRuntime -eq $payloadRuntime
     }
     elseif ($HostGeneration -eq '2027') {
-        $_.autoCAD -eq '2027' -and $_.managedRuntime -eq $expectedRuntime
+        $_.autoCAD -eq '2027' -and $_.managedRuntime -eq $payloadRuntime
     }
     else {
-        $_.autoCAD -eq '2025-2026' -and $_.managedRuntime -eq $expectedRuntime
+        $_.autoCAD -eq '2025-2026' -and $_.managedRuntime -eq $payloadRuntime
     }
 } | Select-Object -First 1
 if ($null -eq $matrixMatch) {
-    throw "Release provenance does not contain the expected runtime payload for AutoCAD $HostGeneration / $expectedRuntime."
+    throw "Release provenance does not contain the expected payload for AutoCAD $HostGeneration / $payloadRuntime."
 }
 
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($acadItem.FullName)
@@ -107,7 +124,7 @@ $evidence = [ordered]@{
     }
     host = [ordered]@{
         generation = $HostGeneration
-        expectedRuntimeFamily = $expectedRuntime
+        expectedRuntimeFamily = $expectedHostRuntime
         observedClrVersion = $null
         acadExe = $acadItem.FullName
         productName = [string]$versionInfo.ProductName
@@ -136,4 +153,5 @@ finally {
 Write-Host "Created native acceptance session: $EvidencePath"
 Write-Host "Candidate SHA: $($evidence.candidate.sourceCommit)"
 Write-Host "AutoCAD ${HostGeneration}: $($versionInfo.ProductVersion)"
+Write-Host "Payload runtime: $payloadRuntime; expected host runtime: $expectedHostRuntime"
 Write-Host 'All acceptance checks start as pending. Hosted/source CI does not set native PASS results.'

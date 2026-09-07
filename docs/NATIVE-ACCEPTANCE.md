@@ -2,7 +2,9 @@
 
 Hosted CI proves source/API/package contracts. It does **not** prove that QS3D runs correctly inside licensed AutoCAD.
 
-The default formal release matrix remains AutoCAD 2025, 2026 and 2027. AutoCAD 2021 is supported through a separate legacy evidence lane because it uses the R24.0 / .NET Framework 4.8 payload. The same fail-closed rules apply to both lanes: source compilation or packaged DLL presence never creates native PASS evidence.
+The default formal release matrix remains AutoCAD 2025, 2026 and 2027. AutoCAD 2021, 2022, 2023 and 2024 are supported through a separate legacy evidence matrix because they share the R24.0-R24.3 / .NET Framework 4.8 payload family. The same fail-closed rules apply to both matrices: source compilation or packaged DLL presence never creates native PASS evidence.
+
+AutoCAD 2026 has an additional runtime boundary. QS3D ships the existing .NET 8-targeted 2025-2026 payload. Depending on AutoCAD 2026 update level, the real host may report CLR major 8 or 10. Native evidence must record the concrete CLR observed after QS3D loads; hosted CI must not infer that result from the target framework.
 
 ## Preconditions
 
@@ -37,41 +39,43 @@ Close AutoCAD before Setup operations. For the default modern matrix create one 
   -Operator 'Your Name'
 ```
 
-For an AutoCAD 2021 legacy qualification use the same exact candidate and create a separate session:
+For legacy qualification use the same exact candidate and create a separate session for every R24.x host you intend to qualify:
 
 ```powershell
-./scripts/new-native-acceptance.ps1 `
-  -Version 0.1.0 `
-  -HostGeneration 2021 `
-  -AcadExe 'C:\Program Files\Autodesk\AutoCAD 2021\acad.exe' `
-  -Operator 'Your Name'
+./scripts/new-native-acceptance.ps1 -Version 0.1.0 -HostGeneration 2021 -AcadExe 'C:\Program Files\Autodesk\AutoCAD 2021\acad.exe' -Operator 'Your Name'
+./scripts/new-native-acceptance.ps1 -Version 0.1.0 -HostGeneration 2022 -AcadExe 'C:\Program Files\Autodesk\AutoCAD 2022\acad.exe' -Operator 'Your Name'
+./scripts/new-native-acceptance.ps1 -Version 0.1.0 -HostGeneration 2023 -AcadExe 'C:\Program Files\Autodesk\AutoCAD 2023\acad.exe' -Operator 'Your Name'
+./scripts/new-native-acceptance.ps1 -Version 0.1.0 -HostGeneration 2024 -AcadExe 'C:\Program Files\Autodesk\AutoCAD 2024\acad.exe' -Operator 'Your Name'
 ```
 
 By default these write files such as:
 
 ```text
 artifacts/native-acceptance/AutoCAD-2021.json
+artifacts/native-acceptance/AutoCAD-2022.json
+artifacts/native-acceptance/AutoCAD-2023.json
+artifacts/native-acceptance/AutoCAD-2024.json
 artifacts/native-acceptance/AutoCAD-2025.json
 artifacts/native-acceptance/AutoCAD-2026.json
 artifacts/native-acceptance/AutoCAD-2027.json
 ```
 
-The session creator verifies release provenance first, records the exact source SHA/artifact hashes, reads the real `acad.exe` product/file version and creates every native check as `pending`. It never creates a passing check.
+The session creator verifies release provenance first, maps 2021-2024 to the single legacy provenance payload, records the exact source SHA/artifact hashes, reads the real `acad.exe` product/file version and creates every native check as `pending`. It never creates a passing check.
 
 ## Record the runtime observed inside AutoCAD
 
 After `QS3D` has actually loaded, run `QS3DABOUT` and record the CLR version it reports.
 
-AutoCAD 2021 should report the .NET Framework CLR 4 family, commonly a value such as `4.0.30319.42000`:
+AutoCAD 2021-2024 should report the .NET Framework CLR 4 family, commonly a value such as `4.0.30319.42000`:
 
 ```powershell
 ./scripts/record-native-runtime.ps1 `
-  -EvidencePath artifacts/native-acceptance/AutoCAD-2021.json `
+  -EvidencePath artifacts/native-acceptance/AutoCAD-2024.json `
   -ObservedClrVersion 4.0.30319.42000 `
-  -Notes 'QS3DABOUT in the tested AutoCAD 2021 session reported CLR 4.0.30319.42000.'
+  -Notes 'QS3DABOUT in the tested AutoCAD 2024 session reported CLR 4.0.30319.42000.'
 ```
 
-Example modern session:
+AutoCAD 2025 should report CLR major 8:
 
 ```powershell
 ./scripts/record-native-runtime.ps1 `
@@ -80,7 +84,18 @@ Example modern session:
   -Notes 'QS3DABOUT in the tested AutoCAD 2025 session reported CLR 8.0.22.'
 ```
 
-The recorder marks `runtime_identity` pass only when AutoCAD 2021 reports CLR major 4, AutoCAD 2025/2026 reports major 8 and AutoCAD 2027 reports major 10. A mismatch is recorded as failure and the script exits with an error.
+For AutoCAD 2026, record the actual value. CLR major 8 is valid for the original .NET 8 host; CLR major 10 is also valid for updated 2026 hosts such as the 2026.1.2+ runtime transition. This runtime check proves only that the real host/runtime family matches the supported transition boundary; all other native checks still have to pass.
+
+```powershell
+./scripts/record-native-runtime.ps1 `
+  -EvidencePath artifacts/native-acceptance/AutoCAD-2026.json `
+  -ObservedClrVersion 10.0.0 `
+  -Notes 'QS3DABOUT in this updated AutoCAD 2026 session reported CLR 10.0.0; exact product/file version is stored in the evidence file.'
+```
+
+AutoCAD 2027 must report CLR major 10.
+
+The recorder marks `runtime_identity` pass only when AutoCAD 2021-2024 reports CLR major 4, AutoCAD 2025 reports major 8, AutoCAD 2026 reports major 8 or 10, and AutoCAD 2027 reports major 10. A mismatch is recorded as failure and the script exits with an error.
 
 ## Record explicit PASS/FAIL results
 
@@ -88,10 +103,10 @@ Use the stable check ids from `native-acceptance/required-checks.json`. Each non
 
 ```powershell
 ./scripts/record-native-result.ps1 `
-  -EvidencePath artifacts/native-acceptance/AutoCAD-2021.json `
+  -EvidencePath artifacts/native-acceptance/AutoCAD-2024.json `
   -CheckId bundle_command_autoload `
   -Status pass `
-  -Notes 'Fresh AutoCAD 2021 start; typed QS3D; the R24.0 bundle payload lazy-loaded and workspace opened without NETLOAD.'
+  -Notes 'Fresh AutoCAD 2024 start; typed QS3D; the R24.x legacy bundle payload lazy-loaded and workspace opened without NETLOAD.'
 ```
 
 Use `fail` for an observed defect and `blocked` when the environment cannot execute the check. Do not mark a check pass merely because hosted CI compiled related source.
@@ -102,7 +117,7 @@ Required coverage includes installer exactness, bundle autoload, palette startup
 
 The source uses a runtime bridge instead of a compile-time `AdWindows.dll` reference. Hosted CI can prove only that the bridge compiles without importing `Autodesk.Windows`; it cannot prove the installed AutoCAD UI assembly exposes the expected runtime types/properties.
 
-For every native host being qualified, including the separate AutoCAD 2021 lane when it is tested:
+For every native host being qualified, including any legacy 2021-2024 host:
 
 1. Start AutoCAD fresh with the exact installed candidate and confirm the normal `QS3D` palette/workspace opens.
 2. Run `QS3DRIBBON`.
@@ -125,19 +140,21 @@ For the default production qualification, when AutoCAD 2025, 2026 and 2027 have 
 
 The default validator therefore continues to require exactly one 2025, 2026 and 2027 session.
 
-Validate the AutoCAD 2021 legacy lane separately:
+Validate the complete AutoCAD 2021-2024 legacy matrix separately:
 
 ```powershell
 ./scripts/validate-native-acceptance.ps1 `
   -Version 0.1.0 `
-  -RequiredGenerations 2021
+  -RequiredGenerations @('2021','2022','2023','2024')
 ```
+
+You may request an individual legacy generation when intentionally qualifying only that host, but that must not be represented as qualification of the other legacy generations.
 
 The validator refuses a requested generation set unless:
 
 - exactly one evidence session exists for every requested host generation;
 - all evidence files bind to the exact same requested release version/source SHA/artifact hashes;
-- observed CLR majors match each generation's expected runtime family;
+- expected runtime-family labels and observed CLR majors match the generation rules, including AutoCAD 2026 major 8-or-10 handling;
 - every required check exists exactly once;
 - every required check is explicitly `pass` with non-empty notes and a timestamp;
 - every session has a distinct session id.
@@ -149,11 +166,11 @@ artifacts/native-acceptance/NATIVE-ACCEPTANCE-SUMMARY.json
 artifacts/native-acceptance/NATIVE-ACCEPTED-SHA.txt
 ```
 
-These are **review artifacts**, not an automatic release authorization. The validator does not change GitHub variables, create tags, publish releases or set `QS3D_NATIVE_ACCEPTED_SHA`. The default production release policy still depends on the intentionally selected formal release matrix and release-owner review; a standalone AutoCAD 2021 legacy PASS must not silently replace the required 2025/2026/2027 production evidence.
+These are **review artifacts**, not an automatic release authorization. The validator does not change GitHub variables, create tags, publish releases or set `QS3D_NATIVE_ACCEPTED_SHA`. The default production release policy still depends on the intentionally selected formal release matrix and release-owner review; a standalone or partial legacy PASS must not silently replace the required 2025/2026/2027 production evidence.
 
 ## Hosted-CI boundary
 
-CI runs `validate-native-acceptance-contract.ps1` to parse/guard the evidence tooling and `test-native-acceptance-failclosed.ps1` to prove that synthetic sessions with `pending` checks are rejected. The fail-closed smoke covers both the default 2025/2026/2027 matrix and a separate AutoCAD 2021 session. Synthetic rejection tests never create PASS evidence and are not native runtime evidence.
+CI runs `validate-native-acceptance-contract.ps1` to parse/guard the evidence tooling and `test-native-acceptance-failclosed.ps1` to prove that synthetic sessions with `pending` checks are rejected. The fail-closed smoke covers both the default 2025/2026/2027 matrix and the complete separate AutoCAD 2021/2022/2023/2024 legacy matrix. The synthetic 2026 case exercises the CLR-10 transition path but remains `pending`, so hosted CI still cannot create native PASS evidence.
 
 ## Evidence handling
 

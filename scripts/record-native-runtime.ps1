@@ -5,6 +5,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$legacyGenerations = @('2021','2022','2023','2024')
+$supportedGenerations = $legacyGenerations + @('2025','2026','2027')
 
 if (-not (Test-Path -LiteralPath $EvidencePath -PathType Leaf)) {
     throw "Native acceptance evidence file not found: $EvidencePath"
@@ -17,14 +19,23 @@ $evidence = Get-Content -Raw -LiteralPath $EvidencePath | ConvertFrom-Json
 if ($evidence.schemaVersion -ne 1 -or $evidence.product -ne 'QS3D AutoCAD') {
     throw 'Evidence file is not a supported QS3D AutoCAD native acceptance session.'
 }
+$generation = [string]$evidence.host.generation
+if ($generation -notin $supportedGenerations) {
+    throw "Evidence contains unsupported AutoCAD generation '$generation'."
+}
 
-$expectedMajor = switch ([string]$evidence.host.generation) {
-    '2021' { 4 }
-    '2027' { 10 }
-    default { 8 }
+$allowedMajors = switch ($generation) {
+    '2021' { @(4) }
+    '2022' { @(4) }
+    '2023' { @(4) }
+    '2024' { @(4) }
+    '2025' { @(8) }
+    '2026' { @(8, 10) }
+    '2027' { @(10) }
+    default { @() }
 }
 $actualMajor = [int]$Matches.major
-$status = if ($actualMajor -eq $expectedMajor) { 'pass' } else { 'fail' }
+$status = if ($actualMajor -in $allowedMajors) { 'pass' } else { 'fail' }
 $now = [DateTimeOffset]::UtcNow.ToString('O')
 $evidence.host.observedClrVersion = $ObservedClrVersion
 $evidence.updatedAtUtc = $now
@@ -33,10 +44,11 @@ $runtimeCheck = @($evidence.checks | Where-Object { $_.id -eq 'runtime_identity'
 if ($runtimeCheck.Count -ne 1) {
     throw 'Evidence contract must contain exactly one runtime_identity check.'
 }
+$allowedMajorText = $allowedMajors -join ' or '
 $runtimeCheck[0].status = $status
 $runtimeCheck[0].recordedAtUtc = $now
 $runtimeCheck[0].notes = if ([string]::IsNullOrWhiteSpace($Notes)) {
-    "Observed CLR $ObservedClrVersion; expected major $expectedMajor for AutoCAD $($evidence.host.generation)."
+    "Observed CLR $ObservedClrVersion; allowed major $allowedMajorText for AutoCAD $generation ($($evidence.host.expectedRuntimeFamily))."
 }
 else {
     $Notes
@@ -51,7 +63,7 @@ finally {
     Remove-Item -Force -LiteralPath $temp -ErrorAction SilentlyContinue
 }
 
-Write-Host "Recorded CLR $ObservedClrVersion for AutoCAD $($evidence.host.generation): $status"
+Write-Host "Recorded CLR $ObservedClrVersion for AutoCAD ${generation}: $status"
 if ($status -ne 'pass') {
-    throw "Observed CLR $ObservedClrVersion does not match the expected runtime family $($evidence.host.expectedRuntimeFamily)."
+    throw "Observed CLR $ObservedClrVersion does not match the allowed runtime family $($evidence.host.expectedRuntimeFamily)."
 }
