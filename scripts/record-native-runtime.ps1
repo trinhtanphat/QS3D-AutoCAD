@@ -63,7 +63,7 @@ finally {
     Remove-Item -Force -LiteralPath $temp -ErrorAction SilentlyContinue
 }
 
-Write-Host "Recorded CLR $ObservedClrVersion for AutoCAD $generation: $status"
+Write-Host "Recorded CLR $ObservedClrVersion for AutoCAD ${generation}: $status"
 if ($status -ne 'pass') {
     throw "Observed CLR $ObservedClrVersion does not match the allowed runtime family $($evidence.host.expectedRuntimeFamily)."
 }
