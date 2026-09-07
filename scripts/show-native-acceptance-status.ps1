@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$supportedGenerations = @('2021','2025','2026','2027')
+$supportedGenerations = @('2021','2022','2023','2024','2025','2026','2027')
 $Generations = @($Generations | ForEach-Object { [string]$_ } | Select-Object -Unique)
 if ($Generations.Count -eq 0) { throw 'At least one AutoCAD generation must be requested.' }
 foreach ($generation in $Generations) {

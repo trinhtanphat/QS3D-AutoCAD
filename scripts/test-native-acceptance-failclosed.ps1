@@ -92,8 +92,16 @@ function Assert-PendingRejected([string[]]$EvidencePaths, [string[]]$RequiredGen
 
 try {
     foreach ($generation in @('2025','2026','2027')) {
-        $runtime = if ($generation -eq '2027') { '.NET 10' } else { '.NET 8' }
-        $clr = if ($generation -eq '2027') { '10.0.0' } else { '8.0.0' }
+        $runtime = switch ($generation) {
+            '2025' { '.NET 8' }
+            '2026' { '.NET 8 or .NET 10' }
+            '2027' { '.NET 10' }
+        }
+        $clr = switch ($generation) {
+            '2025' { '8.0.0' }
+            '2026' { '10.0.0' }
+            '2027' { '10.0.0' }
+        }
         $evidence = New-SyntheticPendingEvidence -Generation $generation -Runtime $runtime -Clr $clr
         $path = Join-Path $root "AutoCAD-$generation.json"
         $evidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $path -Encoding utf8NoBOM
@@ -102,12 +110,16 @@ try {
 
     Assert-PendingRejected -EvidencePaths $paths -RequiredGenerations @('2025','2026','2027')
 
-    $legacyPath = Join-Path $root 'AutoCAD-2021.json'
-    $legacyEvidence = New-SyntheticPendingEvidence -Generation '2021' -Runtime '.NET Framework 4.8' -Clr '4.0.30319.42000'
-    $legacyEvidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $legacyPath -Encoding utf8NoBOM
-    Assert-PendingRejected -EvidencePaths @($legacyPath) -RequiredGenerations @('2021')
+    $legacyPaths = @()
+    foreach ($generation in @('2021','2022','2023','2024')) {
+        $legacyPath = Join-Path $root "AutoCAD-$generation.json"
+        $legacyEvidence = New-SyntheticPendingEvidence -Generation $generation -Runtime '.NET Framework 4.8' -Clr '4.0.30319.42000'
+        $legacyEvidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $legacyPath -Encoding utf8NoBOM
+        $legacyPaths += $legacyPath
+    }
+    Assert-PendingRejected -EvidencePaths $legacyPaths -RequiredGenerations @('2021','2022','2023','2024')
 
-    Write-Host 'Native acceptance fail-closed smoke passed for the default 2025/2026/2027 matrix and the separate AutoCAD 2021 legacy lane. Hosted CI cannot turn pending synthetic evidence into native PASS.'
+    Write-Host 'Native acceptance fail-closed smoke passed for the default 2025/2026/2027 matrix and the separate AutoCAD 2021-2024 legacy matrix. Hosted CI cannot turn pending synthetic evidence into native PASS.'
 }
 finally {
     Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue

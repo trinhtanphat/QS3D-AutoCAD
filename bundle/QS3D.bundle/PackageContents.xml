@@ -2,8 +2,8 @@
 <ApplicationPackage SchemaVersion="1.0" AutodeskProduct="AutoCAD" ProductType="Application" Name="QS3D AutoCAD" Description="QS3D structural modelling and quantity tools for AutoCAD" AppVersion="0.1.0" Author="QS3D" ProductCode="{D1F233AE-B52C-493C-A5FB-C99AC8629BA8}" UpgradeCode="{D7DB9D54-9A41-4725-A2D8-E2B445CF79BB}">
   <CompanyDetails Name="QS3D" />
   <Components>
-    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R24.0" />
-    <ComponentEntry AppName="QS3D AutoCAD 2021" ModuleName="./Contents/2021/QS3D.AutoCAD.dll" AppDescription="QS3D AutoCAD .NET Framework 4.8 host" LoadReasons="LoadOnCommandInvocation">
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R24.3" />
+    <ComponentEntry AppName="QS3D AutoCAD 2021-2024" ModuleName="./Contents/2021/QS3D.AutoCAD.dll" AppDescription="QS3D AutoCAD .NET Framework 4.8 legacy host for AutoCAD 2021-2024" LoadReasons="LoadOnCommandInvocation">
       <Commands GroupName="QS3D">
         <Command Global="QS3D" Local="QS3D" />
         <Command Global="QS3DABOUT" Local="QS3DABOUT" />
