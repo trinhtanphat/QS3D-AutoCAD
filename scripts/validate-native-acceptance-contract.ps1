@@ -26,13 +26,13 @@ if ($contract.schemaVersion -ne 1) {
 }
 
 $generationEnum = @($schema.properties.host.properties.generation.enum)
-foreach ($generation in @('2021','2025','2026','2027')) {
+foreach ($generation in @('2021','2022','2023','2024','2025','2026','2027')) {
     if ($generationEnum -notcontains $generation) {
         throw "Native evidence schema is missing AutoCAD generation $generation."
     }
 }
 $runtimeEnum = @($schema.properties.host.properties.expectedRuntimeFamily.enum)
-foreach ($runtime in @('.NET Framework 4.8','.NET 8','.NET 10')) {
+foreach ($runtime in @('.NET Framework 4.8','.NET 8','.NET 10','.NET 8 or .NET 10')) {
     if ($runtimeEnum -notcontains $runtime) {
         throw "Native evidence schema is missing runtime family '$runtime'."
     }
@@ -95,7 +95,17 @@ $runtimeSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\record-
 $validateSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\validate-native-acceptance.ps1')
 $rejectionSource = Get-Content -Raw -LiteralPath (Join-Path $repo 'scripts\test-native-acceptance-failclosed.ps1')
 
-foreach ($requiredSnippet in @('All acceptance checks start as pending', "status = 'pending'", 'verify-artifacts.ps1', 'GetVersionInfo', "ValidateSet('2021','2025','2026','2027')", ".NET Framework 4.8")) {
+foreach ($requiredSnippet in @(
+    'All acceptance checks start as pending',
+    "status = 'pending'",
+    'verify-artifacts.ps1',
+    'GetVersionInfo',
+    "ValidateSet('2021','2022','2023','2024','2025','2026','2027')",
+    ".NET Framework 4.8",
+    '.NET 8 or .NET 10',
+    '$payloadRuntime',
+    '$expectedHostRuntime'
+)) {
     if (-not $newSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native session creation regression: missing '$requiredSnippet'."
     }
@@ -105,14 +115,23 @@ foreach ($requiredSnippet in @("ValidateSet('pending','pass','fail','blocked')",
         throw "Native result recorder regression: missing '$requiredSnippet'."
     }
 }
-foreach ($requiredSnippet in @('observedClrVersion', "'2021' { 4 }", "'2027' { 10 }", 'default { 8 }')) {
+foreach ($requiredSnippet in @(
+    'observedClrVersion',
+    '$allowedMajors',
+    "@('2021','2022','2023','2024')",
+    "'2026' { @(8, 10) }",
+    "'2027' { @(10) }"
+)) {
     if (-not $runtimeSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native runtime recorder regression: missing '$requiredSnippet'."
     }
 }
 foreach ($requiredSnippet in @(
     "RequiredGenerations = @('2025','2026','2027')",
-    "supportedGenerations = @('2021','2025','2026','2027')",
+    "supportedGenerations = @('2021','2022','2023','2024','2025','2026','2027')",
+    ".NET 8 or .NET 10",
+    "@('2021','2022','2023','2024')",
+    "@(8, 10)",
     "status -ne 'pass'",
     'distinct sessionId values',
     'does not modify GitHub variables or publish a release'
@@ -121,7 +140,13 @@ foreach ($requiredSnippet in @(
         throw "Native validator regression: missing '$requiredSnippet'."
     }
 }
-foreach ($requiredSnippet in @('HOSTED-CI-SYNTHETIC', "status = 'pending'", 'CRITICAL: synthetic pending native evidence was not rejected')) {
+foreach ($requiredSnippet in @(
+    'HOSTED-CI-SYNTHETIC',
+    "status = 'pending'",
+    "@('2021','2022','2023','2024')",
+    '.NET 8 or .NET 10',
+    'CRITICAL: synthetic pending native evidence was not rejected'
+)) {
     if (-not $rejectionSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
         throw "Native fail-closed smoke regression: missing '$requiredSnippet'."
     }
@@ -140,5 +165,5 @@ foreach ($forbidden in @('gh variable set', 'gh release create', 'git tag', 'Set
     }
 }
 
-Write-Host "Native acceptance contract guards passed with $($ids.Count) required native checks and AutoCAD 2021/2025/2026/2027 schema support."
+Write-Host "Native acceptance contract guards passed with $($ids.Count) required native checks and AutoCAD 2021-2027 schema support."
 Write-Host 'Hosted CI validates tooling only; it does not create native PASS evidence.'
