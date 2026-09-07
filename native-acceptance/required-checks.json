@@ -29,6 +29,15 @@
     { "id": "uninstall", "description": "Setup --uninstall removes QS3D.bundle and AutoCAD no longer exposes QS3D commands on restart." },
     { "id": "ribbon_surface", "description": "QS3D Ribbon tab/panels are present and invoke the intended commands through the installed AutoCAD UI runtime." },
     { "id": "ribbon_visual_qa", "description": "Ribbon/workspace is usable at high DPI and AutoCAD light/dark themes on the tested host." },
+    { "id": "mep_takeoff_recognition_quantity", "description": "Run QS3DMEPTAKEOFF on representative supported MEP geometry and verify recognition, quantity and unit parity plus fail-closed unsupported or ambiguous handling." },
+    { "id": "mep_clash_classification", "description": "Run QS3DMEPCLASH on representative hard and clearance clash cases and verify deterministic pair, type, severity and geometry classification." },
+    { "id": "mep_clash_locate_selection_safety", "description": "Run QS3DMEPCLASHLOCATE for an exact clash pair and verify PICKFIRST selection; stale, unknown, ambiguous or partially resolved references fail closed without replacing prior valid selection or review state." },
+    { "id": "mep_exact_clash_review", "description": "Run QS3DMEPEXACTCLASH and verify exact native-geometry clash results against representative known cases." },
+    { "id": "mep_zoom_selection_review", "description": "Run QS3DMEPZOOMSELECTION from representative MEP review selection and verify the intended visible and selected objects in the owning document without unintended selection or state drift." },
+    { "id": "mep_review_palette_lifecycle", "description": "Open, use and close QS3DMEPREVIEW and the MEP review palette modelessly; verify command parity, focus and lifecycle behavior plus active-document affinity." },
+    { "id": "mep_recognition_profile_persistence", "description": "Edit and save a MEP recognition profile, restart AutoCAD and verify persistence; corrupt or invalid profile input must fail closed within documented bounds." },
+    { "id": "mep_multidwg_document_affinity", "description": "With multiple drawings open, verify MEP takeoff, clash, Locate, review and profile operations remain bound to the active or owning document and do not leak selection or results across DWGs." },
+    { "id": "mep_readonly_nonmutation", "description": "Verify MEP analysis, review, Locate and profile-read paths do not create or mutate unrelated QS3D semantic project state, DWG entities, XData, XRecords or unintended sidecar/project state." },
     { "id": "artifact_provenance_match", "description": "Installed/tested artifact hashes and exact source SHA match RELEASE-PROVENANCE.json." }
   ]
 }
