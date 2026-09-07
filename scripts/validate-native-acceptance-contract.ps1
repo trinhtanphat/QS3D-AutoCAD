@@ -70,6 +70,15 @@ $criticalChecks = @(
     'uninstall',
     'ribbon_surface',
     'ribbon_visual_qa',
+    'mep_takeoff_recognition_quantity',
+    'mep_clash_classification',
+    'mep_clash_locate_selection_safety',
+    'mep_exact_clash_review',
+    'mep_zoom_selection_review',
+    'mep_review_palette_lifecycle',
+    'mep_recognition_profile_persistence',
+    'mep_multidwg_document_affinity',
+    'mep_readonly_nonmutation',
     'artifact_provenance_match'
 )
 foreach ($id in $criticalChecks) {
@@ -145,6 +154,9 @@ foreach ($requiredSnippet in @(
     "status = 'pending'",
     "@('2021','2022','2023','2024')",
     '.NET 8 or .NET 10',
+    'requiredMepIds',
+    'mep_takeoff_recognition_quantity',
+    'mep_readonly_nonmutation',
     'CRITICAL: synthetic pending native evidence was not rejected'
 )) {
     if (-not $rejectionSource.Contains($requiredSnippet, [StringComparison]::Ordinal)) {
