@@ -14,6 +14,23 @@ if (-not (Test-Path -LiteralPath $provenancePath -PathType Leaf)) {
 
 $provenance = Get-Content -Raw -LiteralPath $provenancePath | ConvertFrom-Json
 $contract = Get-Content -Raw -LiteralPath $checksPath | ConvertFrom-Json
+$requiredMepIds = @(
+    'mep_takeoff_recognition_quantity',
+    'mep_clash_classification',
+    'mep_clash_locate_selection_safety',
+    'mep_exact_clash_review',
+    'mep_zoom_selection_review',
+    'mep_review_palette_lifecycle',
+    'mep_recognition_profile_persistence',
+    'mep_multidwg_document_affinity',
+    'mep_readonly_nonmutation'
+)
+$contractIds = @($contract.checks | ForEach-Object { [string]$_.id })
+foreach ($requiredMepId in $requiredMepIds) {
+    if ($contractIds -notcontains $requiredMepId) {
+        throw "Native acceptance contract is missing required MEP check '$requiredMepId'."
+    }
+}
 $tempRoot = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
 $root = Join-Path $tempRoot ("qs3d-native-rejection-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $root | Out-Null
