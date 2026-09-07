@@ -19,6 +19,7 @@ $setupOutput = Join-Path $artifacts 'setup-publish'
 $setupExe = Join-Path $artifacts "QS3D-AutoCAD-$Version-Setup.exe"
 $provenance = Join-Path $artifacts 'RELEASE-PROVENANCE.json'
 $checksums = Join-Path $artifacts 'SHA256SUMS.txt'
+$expectedPlatformCommit = 'e029d4ba0de6ffe80575f7aed96affa1db1b9b33'
 
 if ($Version -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
     throw "Version must be SemVer-like, for example 0.1.0 or 0.1.0-preview.1: $Version"
@@ -29,6 +30,11 @@ try {
     $commit = (& git rev-parse HEAD).Trim()
     if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-fA-F]{40}$') {
         throw 'Unable to resolve the exact git commit for release provenance.'
+    }
+
+    $platformCommit = (& git -C external/QS3D-Platform rev-parse HEAD).Trim().ToLowerInvariant()
+    if ($LASTEXITCODE -ne 0 -or $platformCommit -ne $expectedPlatformCommit) {
+        throw "QS3D-Platform source pin mismatch: expected $expectedPlatformCommit, actual $platformCommit"
     }
 
     $dirtyEntries = @(& git status --porcelain --untracked-files=no)
@@ -71,13 +77,26 @@ $payloads = @(
     @{ Framework = 'net8.0-windows'; Folder = '2025-2026'; AutoCAD = '2025-2026'; Runtime = '.NET 8' },
     @{ Framework = 'net10.0-windows'; Folder = '2027'; AutoCAD = '2027'; Runtime = '.NET 10' }
 )
+$runtimeAssemblies = @(
+    'QS3D.AutoCAD.dll',
+    'QS3D.Core.dll',
+    'QS3D.Platform.Parity.dll',
+    'QS3D.Platform.Diagnostics.dll',
+    'QS3D.Platform.Domain.dll',
+    'QS3D.Platform.Geometry.dll',
+    'QS3D.Platform.Persistence.dll',
+    'QS3D.Platform.Quantity.dll'
+)
 $stagedAssemblies = @()
 foreach ($payload in $payloads) {
     $output = Join-Path $repo "src\QS3D.AutoCAD\bin\Release\$($payload.Framework)"
     $target = Join-Path $stage "Contents\$($payload.Folder)"
     New-Item -ItemType Directory -Force -Path $target | Out-Null
-    foreach ($assemblyName in @('QS3D.AutoCAD.dll', 'QS3D.Core.dll')) {
+    foreach ($assemblyName in $runtimeAssemblies) {
         $sourceAssembly = Join-Path $output $assemblyName
+        if (-not (Test-Path -LiteralPath $sourceAssembly -PathType Leaf)) {
+            throw "Required runtime assembly was not produced for $($payload.Framework): $assemblyName"
+        }
         $targetAssembly = Join-Path $target $assemblyName
         Copy-Item -Force $sourceAssembly $targetAssembly
         $stagedAssemblies += $targetAssembly
@@ -130,6 +149,7 @@ $provenanceObject = [ordered]@{
     version = $Version
     sourceCommit = $commit.ToLowerInvariant()
     sourceDirty = ($dirtyEntries.Count -gt 0)
+    sharedPlatformCommit = $platformCommit
     generatedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
     signed = [bool]$signingEnabled
     runtimeMatrix = @(
@@ -152,4 +172,5 @@ Write-Host "Created $setupExe"
 Write-Host "Created $provenance"
 Write-Host "Created $checksums"
 Write-Host "Source commit: $commit"
+Write-Host "Shared Platform commit: $platformCommit"
 Write-Host "Authenticode signing enabled: $signingEnabled"

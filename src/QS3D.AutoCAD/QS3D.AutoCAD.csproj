@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <AssemblyName>QS3D.AutoCAD</AssemblyName>
     <RootNamespace>QS3D.AutoCAD</RootNamespace>
     <Platforms>x64</Platforms>
@@ -11,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../QS3D.Core/QS3D.Core.csproj" />
+    <ProjectReference Include="../../external/QS3D-Platform/src/QS3D.Platform.Parity/QS3D.Platform.Parity.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
