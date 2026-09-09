@@ -134,6 +134,8 @@ internal static class McpCadAgentRuntime
     private static string EmergencyStop()
     {
         _automationStopped = true;
+        McpDesktopControlSession.Disable("emergency-stop");
+        McpBackgroundHostRuntime.DisableForegroundFromLocalUser();
         Interlocked.Increment(ref _automationEpoch);
         McpCadMutationCoordinator.Reset();
         McpDiagnosticHub.Log("cad_agent_stop", "automation emergency stop engaged");

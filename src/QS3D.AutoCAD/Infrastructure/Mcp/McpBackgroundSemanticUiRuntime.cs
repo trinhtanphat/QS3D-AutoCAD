@@ -54,7 +54,6 @@ internal static class McpBackgroundSemanticUiRuntime
         var cls = McpPopupWindowClassifier.ClassName(hwnd);
         if (!string.Equals(cls, "Button", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Only an exact standard Button semantic target is currently invokable in background mode.");
-        McpDesktopControlSession.RequireLocalConsent("autocad_ui_invoke");
         var result = SendMessageTimeout(hwnd, 0x00F5, IntPtr.Zero, IntPtr.Zero, 0x0002, 2000, out _);
         if (result == IntPtr.Zero)
             throw new InvalidOperationException("Semantic provider outcome is uncertain; no automatic retry. Inspect the actionId acknowledgement before recovery.");

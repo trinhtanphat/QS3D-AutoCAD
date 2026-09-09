@@ -67,7 +67,8 @@ internal static class McpDesktopAutomationRuntime
     internal static string Call(string tool, string body)
     {
         if (!IsTool(tool)) throw new InvalidOperationException("Unknown AutoCAD desktop MCP tool: " + tool);
-        if (LocalConsentTools.Contains(tool) || SensitiveReadTools.Contains(tool)) RequireLocalConsent(tool);
+        if (tool.StartsWith("autocad_", StringComparison.Ordinal)) return McpBackgroundHostRuntime.Call(tool, body);
+        McpBackgroundHostRuntime.EnsureGlobalInteractionAllowed(tool);
         return tool switch
         {
             "diagnostics_log_tail" => McpDiagnosticHub.TailJson(McpTopLevelJson.OptionalInt(body, "limit", 25, 1, 100)),
