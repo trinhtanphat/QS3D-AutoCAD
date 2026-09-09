@@ -116,11 +116,18 @@ foreach ($token in $requiredTokens) {
     }
 }
 
-if ($plugin -notmatch 'McpEmbeddedServer\.Start') {
-    throw 'PluginEntry must start the embedded AutoCAD MCP server.'
+$bootstrapPath = Join-Path $root 'src/QS3D.AutoCAD/Infrastructure/Mcp/McpRuntimeBootstrap.cs'
+$v2Path = Join-Path $root 'src/QS3D.AutoCAD/Infrastructure/Mcp/McpEmbeddedServerV2.cs'
+$bootstrap = if (Test-Path $bootstrapPath) { Get-Content -Raw $bootstrapPath } else { '' }
+$v2 = if (Test-Path $v2Path) { Get-Content -Raw $v2Path } else { '' }
+$directStart = $plugin -match 'McpEmbeddedServer\.Start'
+$facadeStart = ($plugin -match 'McpRuntimeBootstrap\.Start') -and ($bootstrap -match 'McpEmbeddedServerV2\.EnsureStarted') -and ($v2 -match 'McpEmbeddedServer\.Start')
+if (-not $directStart -and -not $facadeStart) {
+    throw 'PluginEntry must start the canonical embedded AutoCAD MCP server directly or through the verified Bootstrap/V2 facade chain.'
 }
-if ($plugin -notmatch 'McpEmbeddedServer\.Stop') {
-    throw 'PluginEntry must stop the embedded AutoCAD MCP server during termination.'
+$directStop = $plugin -match 'McpEmbeddedServer\.Stop'
+$facadeStop = ($plugin -match 'McpRuntimeBootstrap\.Stop') -and ($bootstrap -match 'McpEmbeddedServerV2\.Stop') -and ($v2 -match 'McpEmbeddedServer\.Stop')
+if (-not $directStop -and -not $facadeStop) {
+    throw 'PluginEntry must stop the canonical embedded AutoCAD MCP server directly or through the verified Bootstrap/V2 facade chain.'
 }
-
 Write-Host 'AutoCAD MCP tooling/function-calling parity guard passed.'

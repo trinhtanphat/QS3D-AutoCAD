@@ -15,12 +15,10 @@ public sealed class PluginEntry : IExtensionApplication
         var editor = AcApplication.DocumentManager.MdiActiveDocument?.Editor;
         try
         {
-            McpDiagnosticHub.InitializeForPlugin();
-            McpEmbeddedServer.Start();
-            McpTransportSupervisor.Start();
+            var endpoint = McpRuntimeBootstrap.Start();
             editor?.WriteMessage(
                 "\nQS3D AutoCAD loaded. Run QS3D to open the command palette. MCP: "
-                + McpTransportSettings.LocalEndpoint + "\n");
+                + endpoint + "\n");
         }
         catch (System.Exception exception)
         {
@@ -33,7 +31,6 @@ public sealed class PluginEntry : IExtensionApplication
 
     public void Terminate()
     {
-        try { McpTransportSupervisor.Stop(); } catch { }
-        try { McpEmbeddedServer.Stop(); } catch { }
+        try { McpRuntimeBootstrap.Stop(); } catch { }
     }
 }
