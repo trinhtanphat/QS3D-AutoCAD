@@ -1,5 +1,6 @@
 param(
-    [string]$SetupPath = 'artifacts/QS3D-AutoCAD-0.0.0-ci-Setup.exe'
+    [Parameter(Mandatory = $true)]
+    [string]$SetupPath
 )
 
 $ErrorActionPreference = 'Stop'
