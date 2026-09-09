@@ -106,9 +106,12 @@ internal static class McpCadDirectModelRuntime
     private static string Save()
     {
         var document = RequireDocument();
-        var path = Path.GetFullPath(document.Name);
-        if (!Path.IsPathRooted(path) || !string.Equals(Path.GetExtension(path), ".dwg", StringComparison.OrdinalIgnoreCase))
+        var requested = document.Name;
+        if (string.IsNullOrWhiteSpace(requested)
+            || !Path.IsPathRooted(requested)
+            || !string.Equals(Path.GetExtension(requested), ".dwg", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Active drawing must already have a rooted .dwg path before cad_save.");
+        var path = Path.GetFullPath(requested);
         using var documentLock = document.LockDocument();
         document.Database.SaveAs(path, DwgVersion.Current);
         return McpJson.Serialize(new Dictionary<string, object?> { ["saved"] = true, ["path"] = path });
@@ -117,10 +120,12 @@ internal static class McpCadDirectModelRuntime
     private static string SaveAs(string body)
     {
         var requested = McpTopLevelJson.ExtractString(body, "path");
-        if (string.IsNullOrWhiteSpace(requested) || requested.Length > 1024) throw new InvalidOperationException("path is required and must be bounded.");
-        var path = Path.GetFullPath(requested);
-        if (!Path.IsPathRooted(path) || !string.Equals(Path.GetExtension(path), ".dwg", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(requested) || requested.Length > 1024)
+            throw new InvalidOperationException("path is required and must be bounded.");
+        if (!Path.IsPathRooted(requested)
+            || !string.Equals(Path.GetExtension(requested), ".dwg", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("cad_save_as requires an absolute .dwg path.");
+        var path = Path.GetFullPath(requested);
         var overwrite = McpTopLevelJson.ExtractBoolean(body, "overwrite");
         if (File.Exists(path) && !overwrite) throw new InvalidOperationException("Destination exists; overwrite=true is required.");
         RejectProtectedPath(path);
