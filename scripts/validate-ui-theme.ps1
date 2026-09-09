@@ -64,10 +64,13 @@ Require ($updateCommand -match 'UseShellExecute\s*=\s*true') 'QS3DUPDATE must us
 Require ($updateCommand -match 'https://github\.com/trinhtanphat/QS3D-AutoCAD/releases/latest') 'QS3DUPDATE must open the canonical latest-release page.'
 Require ($catalog -match 'new\("QS3DUPDATE",\s*"update",\s*SectionSystem') 'shared command catalog is missing QS3DUPDATE.'
 Require ($ribbon -match 'new\("Update",\s*\["QS3DUPDATE"\]\)') 'Ribbon must expose a dedicated Update panel wired to QS3DUPDATE.'
+Require ($ribbon -match 'CreateUpdateIcon\s*\(') 'Ribbon update button must have a dedicated vector icon factory.'
+Require ($ribbon -match 'SetPropertyIfWritable\(button,\s*"Image",\s*UpdateIcon\)') 'Ribbon update button must set its normal-size icon.'
+Require ($ribbon -match 'SetPropertyIfWritable\(button,\s*"LargeImage",\s*UpdateIcon\)') 'Ribbon update button must set its large icon.'
 Require (([regex]::Matches($uiText, '\["update"\]')).Count -ge 2) 'VI/EN localization must define the update label.'
 foreach ($entry in @($manifest.ApplicationPackage.Components.ComponentEntry)) {
     $commands = @($entry.Commands.Command | ForEach-Object { [string]$_.Global })
     Require ($commands -contains 'QS3DUPDATE') "bundle entry '$($entry.AppName)' is missing the QS3DUPDATE lazy-load trigger."
 }
 
-Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, themed ComboBox popup resources, shared WPF/WinForms palette coverage, and the Ribbon update entry point are present.'
+Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, themed ComboBox popup resources, shared WPF/WinForms palette coverage, and the Ribbon update entry point/icon are present.'
