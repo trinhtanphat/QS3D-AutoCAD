@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Reflection;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace QS3D.AutoCAD.UI;
 
@@ -8,6 +9,7 @@ internal static class Qs3dRibbon
 {
     private const string TabId = "QS3D_AUTOCAD_TAB";
     private const string TabTitle = "QS3D";
+    private static readonly ImageSource UpdateIcon = CreateUpdateIcon();
 
     private static readonly RibbonPanelDefinition[] Panels =
     [
@@ -64,6 +66,15 @@ internal static class Qs3dRibbon
                     SetPropertyIfWritable(button, "ShowText", true);
                     SetPropertyIfWritable(button, "ToolTip", $"{UiText.Get(descriptor.LabelKey)} — {descriptor.Command}");
                     SetRequiredProperty(button, "CommandHandler", new RibbonCommand(descriptor.Command));
+
+                    if (string.Equals(descriptor.Command, "QS3DUPDATE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SetPropertyIfWritable(button, "Image", UpdateIcon);
+                        SetPropertyIfWritable(button, "LargeImage", UpdateIcon);
+                        SetPropertyIfWritable(button, "ShowImage", true);
+                        SetEnumPropertyIfWritable(button, "Size", "Large");
+                    }
+
                     AddToCollection(rowItems, button);
                     AddToCollection(rows, row);
                 }
@@ -83,6 +94,20 @@ internal static class Qs3dRibbon
             message = $"QS3D Ribbon unavailable: {exception.Message}";
             return false;
         }
+    }
+
+    private static ImageSource CreateUpdateIcon()
+    {
+        var geometry = new GeometryGroup();
+        geometry.Children.Add(Geometry.Parse("M 6,15 A 10,10 0 0 1 23,8 L 23,4 L 30,10 L 23,16 L 23,12 A 6,6 0 0 0 12,15 Z"));
+        geometry.Children.Add(Geometry.Parse("M 26,17 A 10,10 0 0 1 9,24 L 9,28 L 2,22 L 9,16 L 9,20 A 6,6 0 0 0 20,17 Z"));
+        geometry.Freeze();
+
+        var brush = new SolidColorBrush(Color.FromRgb(16, 163, 74));
+        brush.Freeze();
+        var image = new DrawingImage(new GeometryDrawing(brush, null, geometry));
+        image.Freeze();
+        return image;
     }
 
     private static Type? ResolveAutodeskWindowsType(string fullName)
@@ -126,6 +151,13 @@ internal static class Qs3dRibbon
     {
         var property = target.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
         if (property?.CanWrite == true) property.SetValue(target, value);
+    }
+
+    private static void SetEnumPropertyIfWritable(object target, string name, string value)
+    {
+        var property = target.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+        if (property?.CanWrite != true || !property.PropertyType.IsEnum) return;
+        property.SetValue(target, Enum.Parse(property.PropertyType, value, true));
     }
 
     private static void AddToCollection(object collection, object item)
