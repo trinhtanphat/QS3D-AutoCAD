@@ -22,7 +22,7 @@ public sealed class PluginEntry : IExtensionApplication
                 "\nQS3D AutoCAD loaded. Run QS3D to open the command palette. MCP: "
                 + McpTransportSettings.LocalEndpoint + "\n");
         }
-        catch (Exception exception)
+        catch (System.Exception exception)
         {
             McpDiagnosticHub.Log("mcp-startup", "startup failed: " + exception.Message);
             editor?.WriteMessage(
