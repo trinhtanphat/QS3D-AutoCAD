@@ -23,7 +23,7 @@ public sealed class Qs3dUpdateCommands
             });
             editor?.WriteMessage("\nOpened the latest QS3D release page. Download the verified Setup.exe there to update QS3D.\n");
         }
-        catch (Exception exception) when (exception is not StackOverflowException and not OutOfMemoryException)
+        catch (System.Exception exception) when (exception is not StackOverflowException and not OutOfMemoryException)
         {
             editor?.WriteMessage($"\nCould not open the QS3D update page: {exception.Message}\nLatest release: {LatestReleaseUrl}\n");
         }
