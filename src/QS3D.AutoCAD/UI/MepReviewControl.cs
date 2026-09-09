@@ -18,11 +18,18 @@ internal sealed class MepReviewControl : WpfUserControl
     private readonly ObservableCollection<RuleRow> _rows = new();
     private readonly WpfDataGrid _grid = new();
     private readonly TextBlock _status = new();
+    private Qs3dThemePalette _theme = Qs3dThemeManager.Current;
+    private bool _themeEventsBound;
 
     internal MepReviewControl()
     {
         FontFamily = new System.Windows.Media.FontFamily("Segoe UI");
+        Background = _theme.Background;
+        Foreground = _theme.Foreground;
         Content = BuildLayout();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+        ApplyTheme(_theme);
         RefreshProfile();
     }
 
@@ -40,7 +47,11 @@ internal sealed class MepReviewControl : WpfUserControl
 
     private FrameworkElement BuildLayout()
     {
-        var root = new Grid { Margin = new Thickness(12) };
+        var root = new Grid
+        {
+            Margin = new Thickness(14),
+            Background = _theme.Background
+        };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1d, GridUnitType.Star) });
@@ -52,12 +63,13 @@ internal sealed class MepReviewControl : WpfUserControl
             Text = "QS3D MEP Review",
             FontSize = 20,
             FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 0, 0, 8)
+            Foreground = _theme.Foreground,
+            Margin = new Thickness(0, 0, 0, 10)
         };
         Grid.SetRow(title, 0);
         root.Children.Add(title);
 
-        var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+        var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10), Background = _theme.Background };
         AddAction(actions, "Takeoff", "QS3DMEPTAKEOFF");
         AddAction(actions, "Broad Clash", "QS3DMEPCLASH");
         AddAction(actions, "Clash Locate", "QS3DMEPCLASHLOCATE");
@@ -70,17 +82,18 @@ internal sealed class MepReviewControl : WpfUserControl
         Grid.SetRow(_grid, 2);
         root.Children.Add(_grid);
 
-        var editorActions = new WrapPanel { Margin = new Thickness(0, 10, 0, 6) };
-        editorActions.Children.Add(Button("Add Rule", (_, _) => AddRule()));
-        editorActions.Children.Add(Button("Remove Selected", (_, _) => RemoveSelected()));
-        editorActions.Children.Add(Button("Save Profile", (_, _) => SaveProfile()));
-        editorActions.Children.Add(Button("Reload", (_, _) => ReloadProfile()));
-        editorActions.Children.Add(Button("Built-in Defaults", (_, _) => SaveDefaults()));
+        var editorActions = new WrapPanel { Margin = new Thickness(0, 10, 0, 6), Background = _theme.Background };
+        editorActions.Children.Add(CreateButton("Add Rule", (_, _) => AddRule()));
+        editorActions.Children.Add(CreateButton("Remove Selected", (_, _) => RemoveSelected()));
+        editorActions.Children.Add(CreateButton("Save Profile", (_, _) => SaveProfile()));
+        editorActions.Children.Add(CreateButton("Reload", (_, _) => ReloadProfile()));
+        editorActions.Children.Add(CreateButton("Built-in Defaults", (_, _) => SaveDefaults()));
         Grid.SetRow(editorActions, 3);
         root.Children.Add(editorActions);
 
         _status.TextWrapping = TextWrapping.Wrap;
-        _status.Margin = new Thickness(0, 4, 0, 0);
+        _status.Margin = new Thickness(0, 5, 0, 0);
+        _status.Foreground = _theme.Muted;
         Grid.SetRow(_status, 4);
         root.Children.Add(_status);
         return root;
@@ -93,6 +106,9 @@ internal sealed class MepReviewControl : WpfUserControl
         _grid.CanUserDeleteRows = false;
         _grid.SelectionMode = DataGridSelectionMode.Single;
         _grid.HeadersVisibility = DataGridHeadersVisibility.Column;
+        _grid.GridLinesVisibility = DataGridGridLinesVisibility.Horizontal;
+        _grid.RowHeaderWidth = 0;
+        _grid.BorderThickness = new Thickness(1);
         _grid.Columns.Add(TextColumn("Id", nameof(RuleRow.Id), 150));
         _grid.Columns.Add(TextColumn("Priority", nameof(RuleRow.Priority), 70));
         _grid.Columns.Add(TextColumn("Discipline", nameof(RuleRow.Discipline), 90));
@@ -109,23 +125,66 @@ internal sealed class MepReviewControl : WpfUserControl
         Width = new DataGridLength(width)
     };
 
-    private static WpfButton Button(string label, RoutedEventHandler handler)
+    private WpfButton CreateButton(string label, RoutedEventHandler handler)
     {
         var button = new WpfButton
         {
             Content = label,
             MinWidth = 96,
+            Height = 32,
             Margin = new Thickness(0, 0, 8, 6),
-            Padding = new Thickness(10, 5, 10, 5)
+            Padding = new Thickness(10, 5, 10, 5),
+            Background = _theme.Card,
+            Foreground = _theme.Foreground,
+            BorderBrush = _theme.Border,
+            BorderThickness = new Thickness(1),
+            Cursor = System.Windows.Input.Cursors.Hand
         };
+        button.MouseEnter += (_, _) => button.Background = _theme.CardHover;
+        button.MouseLeave += (_, _) => button.Background = _theme.Card;
         button.Click += handler;
         return button;
     }
 
-    private static void AddAction(WpfPanel panel, string label, string command)
+    private void AddAction(WpfPanel panel, string label, string command)
     {
-        panel.Children.Add(Button(label, (_, _) => QueueCommand(command)));
+        panel.Children.Add(CreateButton(label, (_, _) => QueueCommand(command)));
     }
+
+    private void ApplyTheme(Qs3dThemePalette palette)
+    {
+        var previous = _theme;
+        _theme = palette;
+        Background = _theme.Background;
+        Foreground = _theme.Foreground;
+        if (Content is System.Windows.DependencyObject root)
+            Qs3dThemeStyler.SwapWpfTheme(root, previous, _theme);
+
+        _grid.Background = _theme.Card;
+        _grid.Foreground = _theme.Foreground;
+        _grid.BorderBrush = _theme.Border;
+        _grid.RowBackground = _theme.Card;
+        _grid.AlternatingRowBackground = _theme.Input;
+        _grid.HorizontalGridLinesBrush = _theme.Border;
+        _grid.VerticalGridLinesBrush = _theme.Border;
+        _status.Foreground = _theme.Muted;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_themeEventsBound) return;
+        Qs3dThemeManager.ThemeChanged += OnThemeChanged;
+        _themeEventsBound = true;
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (!_themeEventsBound) return;
+        Qs3dThemeManager.ThemeChanged -= OnThemeChanged;
+        _themeEventsBound = false;
+    }
+
+    private void OnThemeChanged(object? sender, Qs3dThemeChangedEventArgs e) => ApplyTheme(e.Palette);
 
     private static void QueueCommand(string command)
     {

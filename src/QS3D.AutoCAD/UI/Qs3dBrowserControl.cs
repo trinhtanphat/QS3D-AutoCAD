@@ -24,36 +24,38 @@ internal sealed class Qs3dBrowserControl : UserControl
     private IReadOnlyList<Qs3dIndexedEntity> _items = Array.Empty<Qs3dIndexedEntity>();
     private Document? _boundDocument;
     private bool _syncingSelection;
+    private Qs3dThemePalette _theme = Qs3dThemeManager.Current;
 
     public Qs3dBrowserControl()
     {
         Dock = DockStyle.Fill;
-        Padding = new Padding(8);
+        Padding = new Padding(10);
         AutoScaleMode = AutoScaleMode.Dpi;
-        ApplyTheme();
 
         _title.AutoSize = true;
         _title.Font = new Font(Font, FontStyle.Bold);
         _title.Dock = DockStyle.Top;
-        _title.Padding = new Padding(0, 0, 0, 6);
+        _title.Padding = new Padding(0, 0, 0, 8);
 
         var filters = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 36,
+            Height = 40,
             ColumnCount = 2,
             RowCount = 1,
-            Padding = new Padding(0, 0, 0, 6)
+            Padding = new Padding(0, 0, 0, 8)
         };
         filters.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65));
         filters.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
 
         _filter.Dock = DockStyle.Fill;
         _filter.Margin = new Padding(0, 0, 6, 0);
+        _filter.BorderStyle = BorderStyle.FixedSingle;
         _filter.TextChanged += (_, _) => ApplyFilter();
 
         _kindFilter.Dock = DockStyle.Fill;
         _kindFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _kindFilter.FlatStyle = FlatStyle.Flat;
         _kindFilter.SelectedIndexChanged += (_, _) => ApplyFilter();
         filters.Controls.Add(_filter, 0, 0);
         filters.Controls.Add(_kindFilter, 1, 0);
@@ -64,6 +66,7 @@ internal sealed class Qs3dBrowserControl : UserControl
         _list.FullRowSelect = true;
         _list.HideSelection = false;
         _list.MultiSelect = false;
+        _list.BorderStyle = BorderStyle.FixedSingle;
         _list.Columns.Add("Kind", 75);
         _list.Columns.Add("Name", 145);
         _list.Columns.Add("Handle", 76);
@@ -78,10 +81,11 @@ internal sealed class Qs3dBrowserControl : UserControl
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 74,
+            Height = 76,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = true,
-            AutoSize = false
+            AutoSize = false,
+            Padding = new Padding(0, 6, 0, 0)
         };
         ConfigureButton(_refresh, (_, _) => RefreshData());
         ConfigureButton(_select, (_, _) => SelectSelectedInDrawing());
@@ -95,7 +99,9 @@ internal sealed class Qs3dBrowserControl : UserControl
         Controls.Add(_title);
         Controls.Add(actions);
 
+        Qs3dThemeManager.ThemeChanged += OnThemeChanged;
         UiText.LanguageChanged += OnLanguageChanged;
+        ApplyTheme(_theme);
         ApplyLanguage();
         RefreshData();
     }
@@ -110,10 +116,42 @@ internal sealed class Qs3dBrowserControl : UserControl
         SyncFromDrawingSelection();
     }
 
+    internal void ApplyTheme(Qs3dThemePalette? theme = null)
+    {
+        _theme = theme ?? Qs3dThemeManager.Current;
+        BackColor = _theme.BackgroundColor;
+        ForeColor = _theme.ForegroundColor;
+
+        _title.BackColor = _theme.BackgroundColor;
+        _title.ForeColor = _theme.ForegroundColor;
+        _filter.BackColor = _theme.InputColor;
+        _filter.ForeColor = _theme.ForegroundColor;
+        _kindFilter.BackColor = _theme.InputColor;
+        _kindFilter.ForeColor = _theme.ForegroundColor;
+        _list.BackColor = _theme.CardColor;
+        _list.ForeColor = _theme.ForegroundColor;
+
+        _properties.BackColor = _theme.CardColor;
+        _properties.ViewBackColor = _theme.CardColor;
+        _properties.ViewForeColor = _theme.ForegroundColor;
+        _properties.LineColor = _theme.BorderColor;
+        _properties.CategoryForeColor = _theme.MutedColor;
+
+        foreach (var button in new[] { _refresh, _select, _edit, _language })
+            ApplyButtonTheme(button);
+
+        foreach (Control child in Controls)
+        {
+            if (child is Panel panel) panel.BackColor = _theme.BackgroundColor;
+        }
+        Invalidate(true);
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
+            Qs3dThemeManager.ThemeChanged -= OnThemeChanged;
             UiText.LanguageChanged -= OnLanguageChanged;
             BindDocument(null);
             _filterToolTip.Dispose();
@@ -121,36 +159,27 @@ internal sealed class Qs3dBrowserControl : UserControl
         base.Dispose(disposing);
     }
 
-    private void ApplyTheme()
-    {
-        var dark = true;
-        try
-        {
-            dark = Convert.ToInt32(AcApplication.GetSystemVariable("COLORTHEME"), System.Globalization.CultureInfo.InvariantCulture) != 0;
-        }
-        catch
-        {
-            dark = true;
-        }
-
-        if (!dark) return;
-        BackColor = Color.FromArgb(32, 34, 37);
-        ForeColor = Color.FromArgb(243, 244, 246);
-        _list.BackColor = Color.FromArgb(42, 45, 49);
-        _list.ForeColor = ForeColor;
-        _properties.ViewBackColor = Color.FromArgb(42, 45, 49);
-        _properties.ViewForeColor = ForeColor;
-        _properties.LineColor = Color.FromArgb(58, 62, 68);
-        _properties.CategoryForeColor = Color.FromArgb(169, 175, 184);
-    }
-
-    private static void ConfigureButton(Button button, EventHandler handler)
+    private void ConfigureButton(Button button, EventHandler handler)
     {
         button.AutoSize = true;
-        button.Height = 30;
-        button.Margin = new Padding(2);
-        button.FlatStyle = FlatStyle.System;
+        button.Height = 31;
+        button.Margin = new Padding(2, 2, 4, 2);
+        button.Padding = new Padding(8, 2, 8, 2);
+        button.FlatStyle = FlatStyle.Flat;
+        button.UseVisualStyleBackColor = false;
+        button.Cursor = Cursors.Hand;
         button.Click += handler;
+        button.MouseEnter += (_, _) => button.BackColor = _theme.CardHoverColor;
+        button.MouseLeave += (_, _) => button.BackColor = _theme.CardColor;
+    }
+
+    private void ApplyButtonTheme(Button button)
+    {
+        button.BackColor = _theme.CardColor;
+        button.ForeColor = _theme.ForegroundColor;
+        button.FlatAppearance.BorderColor = _theme.BorderColor;
+        button.FlatAppearance.MouseDownBackColor = _theme.SelectionColor;
+        button.FlatAppearance.MouseOverBackColor = _theme.CardHoverColor;
     }
 
     private void RefreshKindFilter()
@@ -162,9 +191,7 @@ internal sealed class Qs3dBrowserControl : UserControl
             _kindFilter.Items.Clear();
             _kindFilter.Items.Add(UiText.Get("allKinds"));
             foreach (var kind in _items.Select(item => item.Metadata.Kind.ToString()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase))
-            {
                 _kindFilter.Items.Add(kind);
-            }
             var index = selected is null ? 0 : _kindFilter.Items.IndexOf(selected);
             _kindFilter.SelectedIndex = index >= 0 ? index : 0;
         }
@@ -284,6 +311,17 @@ internal sealed class Qs3dBrowserControl : UserControl
 
     private Qs3dIndexedEntity? SelectedEntity =>
         _list.SelectedItems.Count == 1 ? _list.SelectedItems[0].Tag as Qs3dIndexedEntity : null;
+
+    private void OnThemeChanged(object? sender, Qs3dThemeChangedEventArgs e)
+    {
+        if (IsDisposed) return;
+        if (IsHandleCreated && InvokeRequired)
+        {
+            BeginInvoke(new Action(() => ApplyTheme(e.Palette)));
+            return;
+        }
+        ApplyTheme(e.Palette);
+    }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {

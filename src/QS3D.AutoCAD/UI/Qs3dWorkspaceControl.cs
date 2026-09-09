@@ -1,9 +1,10 @@
 using QS3D.AutoCAD.Infrastructure;
 using AcApplication = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 using WpfBorder = System.Windows.Controls.Border;
-using WpfBrush = System.Windows.Media.Brush;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfButton = System.Windows.Controls.Button;
+using WpfComboBox = System.Windows.Controls.ComboBox;
+using WpfComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using WpfContentControl = System.Windows.Controls.ContentControl;
 using WpfFontFamily = System.Windows.Media.FontFamily;
 using WpfGrid = System.Windows.Controls.Grid;
@@ -29,7 +30,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
     private const string ProjectPage = "project";
     private const string SearchPage = "search";
 
-    private readonly WorkspaceTheme _theme = WorkspaceTheme.Detect();
+    private Qs3dThemePalette _theme = Qs3dThemeManager.Current;
     private readonly Dictionary<string, System.Windows.FrameworkElement> _pages = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WpfButton> _navButtons = new(StringComparer.Ordinal);
     private readonly List<WpfButton> _localizedButtons = [];
@@ -37,11 +38,13 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
     private readonly Qs3dBrowserControl _browser = new();
     private readonly WpfContentControl _content = new();
     private readonly WpfTextBox _search = new();
+    private readonly WpfComboBox _themeMode = new();
     private readonly WpfStackPanel _searchResults = new();
     private readonly WpfTextBlock _drawingValue = new();
     private readonly WpfTextBlock _elementValue = new();
     private readonly WpfTextBlock _status = new();
     private string _activePage = HomePage;
+    private bool _eventsBound;
 
     public Qs3dWorkspaceControl()
     {
@@ -49,8 +52,10 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         Background = _theme.Background;
         Foreground = _theme.Foreground;
         Content = BuildLayout();
-        UiText.LanguageChanged += OnLanguageChanged;
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
         ApplyLanguage();
+        SelectThemeMode(Qs3dThemeManager.Mode);
         RefreshData();
     }
 
@@ -153,6 +158,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         var grid = new WpfGrid();
         grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = System.Windows.GridLength.Auto });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = System.Windows.GridLength.Auto });
 
         _search.Height = 34;
         _search.Padding = new System.Windows.Thickness(10, 6, 10, 6);
@@ -162,19 +168,54 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         _search.BorderThickness = new System.Windows.Thickness(1);
         _search.VerticalContentAlignment = WpfVerticalAlignment.Center;
         _search.TextChanged += (_, _) => ApplySearch();
+        _search.GotKeyboardFocus += (_, _) => _search.BorderBrush = _theme.Accent;
+        _search.LostKeyboardFocus += (_, _) => _search.BorderBrush = _theme.Border;
         grid.Children.Add(_search);
 
+        ConfigureThemeSelector();
+        _themeMode.Margin = new System.Windows.Thickness(8, 0, 0, 0);
+        WpfGrid.SetColumn(_themeMode, 1);
+        grid.Children.Add(_themeMode);
+
         var language = CreateToolbarButton("language", UiText.Toggle);
-        language.Margin = new System.Windows.Thickness(8, 0, 0, 0);
-        WpfGrid.SetColumn(language, 1);
+        language.Margin = new System.Windows.Thickness(6, 0, 0, 0);
+        WpfGrid.SetColumn(language, 2);
         grid.Children.Add(language);
         host.Child = grid;
         return host;
     }
 
+    private void ConfigureThemeSelector()
+    {
+        _themeMode.Width = 108;
+        _themeMode.Height = 32;
+        _themeMode.Padding = new System.Windows.Thickness(6, 2, 6, 2);
+        _themeMode.Background = _theme.Card;
+        _themeMode.Foreground = _theme.Foreground;
+        _themeMode.BorderBrush = _theme.Border;
+        _themeMode.BorderThickness = new System.Windows.Thickness(1);
+        _themeMode.Items.Add(CreateThemeItem(Qs3dThemeMode.System, "themeSystem"));
+        _themeMode.Items.Add(CreateThemeItem(Qs3dThemeMode.Light, "themeLight"));
+        _themeMode.Items.Add(CreateThemeItem(Qs3dThemeMode.Dark, "themeDark"));
+        SelectThemeMode(Qs3dThemeManager.Mode);
+        _themeMode.SelectionChanged += (_, _) =>
+        {
+            if (_themeMode.SelectedItem is not WpfComboBoxItem { Tag: Qs3dThemeMode mode }) return;
+            Qs3dThemeManager.SetMode(mode);
+            var error = Qs3dThemeManager.LastPersistenceError;
+            _status.Text = string.IsNullOrWhiteSpace(error) ? UiText.Get("statusReady") : "Theme preference: " + error;
+        };
+    }
+
+    private static WpfComboBoxItem CreateThemeItem(Qs3dThemeMode mode, string labelKey) => new()
+    {
+        Tag = mode,
+        Content = UiText.Get(labelKey)
+    };
+
     private System.Windows.FrameworkElement BuildBody()
     {
-        var body = new WpfGrid();
+        var body = new WpfGrid { Background = _theme.Background };
         body.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(152) });
         body.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) });
 
@@ -225,9 +266,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         stack.Children.Add(CreateSectionTitle("quickActions"));
         var quick = new WpfWrapPanel { Margin = new System.Windows.Thickness(0, 8, 0, 0) };
         foreach (var command in Qs3dCommandCatalog.All.Where(item => item.Primary).Take(10))
-        {
             quick.Children.Add(CreateCommandCard(command, true));
-        }
         stack.Children.Add(quick);
         return Scroll(stack);
     }
@@ -238,16 +277,14 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         stack.Children.Add(CreateSectionTitle(titleKey));
         var wrap = new WpfWrapPanel { Margin = new System.Windows.Thickness(0, 8, 0, 0) };
         foreach (var command in commands)
-        {
             wrap.Children.Add(CreateCommandCard(command, false));
-        }
         stack.Children.Add(wrap);
         return Scroll(stack);
     }
 
     private System.Windows.FrameworkElement BuildProjectPage()
     {
-        var grid = new WpfGrid { Margin = new System.Windows.Thickness(12) };
+        var grid = new WpfGrid { Margin = new System.Windows.Thickness(12), Background = _theme.Background };
         grid.Children.Add(new WpfWindowsFormsHost
         {
             Child = _browser,
@@ -313,6 +350,11 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             BorderThickness = new System.Windows.Thickness(0),
             Cursor = System.Windows.Input.Cursors.Hand
         };
+        button.MouseEnter += (_, _) =>
+        {
+            if (!string.Equals(page, _activePage, StringComparison.Ordinal)) button.Background = _theme.CardHover;
+        };
+        button.MouseLeave += (_, _) => UpdateNavigationState();
         button.Click += (_, _) => ShowPage(page);
         _localizedButtons.Add(button);
         _navButtons[page] = button;
@@ -333,6 +375,8 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             BorderThickness = new System.Windows.Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand
         };
+        button.MouseEnter += (_, _) => button.Background = _theme.CardHover;
+        button.MouseLeave += (_, _) => button.Background = _theme.Card;
         button.Click += (_, _) => action();
         _localizedButtons.Add(button);
         return button;
@@ -375,6 +419,8 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             Cursor = System.Windows.Input.Cursors.Hand,
             Content = content
         };
+        button.MouseEnter += (_, _) => button.Background = _theme.CardHover;
+        button.MouseLeave += (_, _) => button.Background = _theme.Card;
         button.Click += (_, _) =>
         {
             _status.Text = command.Command;
@@ -405,8 +451,8 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
             Background = _theme.Card,
             BorderBrush = _theme.Border,
             BorderThickness = new System.Windows.Thickness(1),
-            CornerRadius = new System.Windows.CornerRadius(8),
-            Padding = new System.Windows.Thickness(12),
+            CornerRadius = new System.Windows.CornerRadius(10),
+            Padding = new System.Windows.Thickness(13),
             Child = stack
         };
     }
@@ -443,9 +489,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
 
         _searchResults.Children.Clear();
         foreach (var command in Qs3dCommandCatalog.Search(_search.Text).Take(24))
-        {
             _searchResults.Children.Add(CreateCommandCard(command, false));
-        }
         _activePage = SearchPage;
         _content.Content = _pages[SearchPage];
         UpdateNavigationState();
@@ -465,6 +509,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
     private void ApplyLanguage()
     {
         _search.ToolTip = UiText.Get("commandSearchHint");
+        _themeMode.ToolTip = UiText.Get("theme");
         foreach (var button in _localizedButtons)
         {
             if (button.Tag is string key) button.Content = UiText.Get(key);
@@ -473,12 +518,64 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         {
             if (text.Tag is string key) text.Text = UiText.Get(key);
         }
+        foreach (var item in _themeMode.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is not Qs3dThemeMode mode) continue;
+            item.Content = UiText.Get(mode switch
+            {
+                Qs3dThemeMode.Light => "themeLight",
+                Qs3dThemeMode.Dark => "themeDark",
+                _ => "themeSystem"
+            });
+        }
         _browser.RefreshData();
         _status.Text = UiText.Get("statusReady");
         UpdateNavigationState();
     }
 
+    private void SelectThemeMode(Qs3dThemeMode mode)
+    {
+        foreach (var item in _themeMode.Items.OfType<WpfComboBoxItem>())
+        {
+            if (item.Tag is Qs3dThemeMode candidate && candidate == mode)
+            {
+                _themeMode.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private void ApplyTheme(Qs3dThemeMode mode, Qs3dThemePalette palette)
+    {
+        var previous = _theme;
+        _theme = palette;
+        Qs3dThemeStyler.SwapWpfTheme(this, previous, _theme);
+        Background = _theme.Background;
+        Foreground = _theme.Foreground;
+        _browser.ApplyTheme(_theme);
+        SelectThemeMode(mode);
+        UpdateNavigationState();
+    }
+
+    private void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (_eventsBound) return;
+        UiText.LanguageChanged += OnLanguageChanged;
+        Qs3dThemeManager.ThemeChanged += OnThemeChanged;
+        _eventsBound = true;
+    }
+
+    private void OnUnloaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (!_eventsBound) return;
+        UiText.LanguageChanged -= OnLanguageChanged;
+        Qs3dThemeManager.ThemeChanged -= OnThemeChanged;
+        _eventsBound = false;
+    }
+
     private void OnLanguageChanged(object? sender, EventArgs e) => ApplyLanguage();
+
+    private void OnThemeChanged(object? sender, Qs3dThemeChangedEventArgs e) => ApplyTheme(e.Mode, e.Palette);
 
     private static WpfScrollViewer Scroll(System.Windows.UIElement content) => new()
     {
@@ -491,74 +588,5 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
     {
         WpfGrid.SetRow(child, row);
         grid.Children.Add(child);
-    }
-
-    private sealed class WorkspaceTheme
-    {
-        private WorkspaceTheme(
-            WpfBrush background,
-            WpfBrush header,
-            WpfBrush sidebar,
-            WpfBrush card,
-            WpfBrush input,
-            WpfBrush border,
-            WpfBrush foreground,
-            WpfBrush muted,
-            WpfBrush accentSoft,
-            WpfBrush accentForeground)
-        {
-            Background = background;
-            Header = header;
-            Sidebar = sidebar;
-            Card = card;
-            Input = input;
-            Border = border;
-            Foreground = foreground;
-            Muted = muted;
-            AccentSoft = accentSoft;
-            AccentForeground = accentForeground;
-        }
-
-        public WpfBrush Background { get; }
-        public WpfBrush Header { get; }
-        public WpfBrush Sidebar { get; }
-        public WpfBrush Card { get; }
-        public WpfBrush Input { get; }
-        public WpfBrush Border { get; }
-        public WpfBrush Foreground { get; }
-        public WpfBrush Muted { get; }
-        public WpfBrush AccentSoft { get; }
-        public WpfBrush AccentForeground { get; }
-
-        public static WorkspaceTheme Detect()
-        {
-            var dark = true;
-            try
-            {
-                var value = AcApplication.GetSystemVariable("COLORTHEME");
-                dark = Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture) != 0;
-            }
-            catch
-            {
-                dark = true;
-            }
-
-            return dark
-                ? new WorkspaceTheme(
-                    MakeBrush("#202225"), MakeBrush("#181A1D"), MakeBrush("#1B1D20"), MakeBrush("#2A2D31"),
-                    MakeBrush("#25282C"), MakeBrush("#3A3E44"), MakeBrush("#F3F4F6"), MakeBrush("#A9AFB8"),
-                    MakeBrush("#173F5F"), MakeBrush("#8DCAFF"))
-                : new WorkspaceTheme(
-                    MakeBrush("#F3F5F7"), MakeBrush("#FFFFFF"), MakeBrush("#F8F9FA"), MakeBrush("#FFFFFF"),
-                    MakeBrush("#FFFFFF"), MakeBrush("#D6DADE"), MakeBrush("#202327"), MakeBrush("#68707A"),
-                    MakeBrush("#E2F1FF"), MakeBrush("#0B5E9A"));
-        }
-
-        private static WpfBrush MakeBrush(string value)
-        {
-            var brush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFromString(value)!;
-            brush.Freeze();
-            return brush;
-        }
     }
 }
