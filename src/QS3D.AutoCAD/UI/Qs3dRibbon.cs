@@ -103,7 +103,7 @@ internal static class Qs3dRibbon
         geometry.Children.Add(Geometry.Parse("M 26,17 A 10,10 0 0 1 9,24 L 9,28 L 2,22 L 9,16 L 9,20 A 6,6 0 0 0 20,17 Z"));
         geometry.Freeze();
 
-        var brush = new SolidColorBrush(Color.FromRgb(16, 163, 74));
+        var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(16, 163, 74));
         brush.Freeze();
         var image = new DrawingImage(new GeometryDrawing(brush, null, geometry));
         image.Freeze();
