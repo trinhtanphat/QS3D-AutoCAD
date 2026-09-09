@@ -35,7 +35,14 @@ Require ($manager -match 'ThemeChanged') 'shared theme manager must publish a Th
 Require ($workspace -match 'Qs3dThemeManager') 'workspace must consume shared theme manager.'
 Require ($workspace -notmatch 'private\s+sealed\s+class\s+WorkspaceTheme') 'legacy private WorkspaceTheme must be removed.'
 Require ($workspace -match 'System|Light|Dark') 'workspace must expose a three-mode theme selector.'
+Require ($workspace -match 'ApplyThemeSelectorPalette\s*\(') 'theme selector must explicitly re-apply popup palette colors after theme changes.'
+foreach ($resourceKey in @('WindowBrushKey', 'ControlBrushKey', 'WindowTextBrushKey', 'ControlTextBrushKey', 'HighlightBrushKey', 'HighlightTextBrushKey')) {
+    Require ($workspace -match "SystemColors\.$resourceKey") "theme selector popup must override SystemColors.$resourceKey instead of inheriting default WPF light colors."
+}
+Require ($workspace -match 'item\.Background\s*=\s*_theme\.Card') 'theme selector items must use the active card background.'
+Require ($workspace -match 'item\.Foreground\s*=\s*_theme\.Foreground') 'theme selector items must use the active foreground color.'
+Require ($workspace -match 'ApplyThemeSelectorPalette\s*\(\s*\)\s*;[\s\S]*SelectThemeMode\s*\(\s*mode\s*\)') 'theme application must recolor the dropdown before restoring the selected mode.'
 Require ($browser -match 'Qs3dThemeManager|Qs3dThemePalette') 'WinForms browser must consume the shared theme.'
 Require ($mep -match 'Qs3dThemeManager|Qs3dThemePalette') 'MEP review palette must consume the shared theme.'
 
-Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing and shared WPF/WinForms palette coverage are present.'
+Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, themed ComboBox popup resources and shared WPF/WinForms palette coverage are present.'

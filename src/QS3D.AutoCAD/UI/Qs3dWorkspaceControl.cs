@@ -197,6 +197,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         _themeMode.Items.Add(CreateThemeItem(Qs3dThemeMode.System, "themeSystem"));
         _themeMode.Items.Add(CreateThemeItem(Qs3dThemeMode.Light, "themeLight"));
         _themeMode.Items.Add(CreateThemeItem(Qs3dThemeMode.Dark, "themeDark"));
+        ApplyThemeSelectorPalette();
         SelectThemeMode(Qs3dThemeManager.Mode);
         _themeMode.SelectionChanged += (_, _) =>
         {
@@ -207,11 +208,51 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         };
     }
 
-    private static WpfComboBoxItem CreateThemeItem(Qs3dThemeMode mode, string labelKey) => new()
+    private WpfComboBoxItem CreateThemeItem(Qs3dThemeMode mode, string labelKey)
     {
-        Tag = mode,
-        Content = UiText.Get(labelKey)
-    };
+        var item = new WpfComboBoxItem
+        {
+            Tag = mode,
+            Content = UiText.Get(labelKey),
+            Padding = new System.Windows.Thickness(8, 5, 8, 5),
+            HorizontalContentAlignment = WpfHorizontalAlignment.Stretch
+        };
+        item.MouseEnter += (_, _) =>
+        {
+            item.Background = _theme.CardHover;
+            item.Foreground = _theme.Foreground;
+        };
+        item.MouseLeave += (_, _) => ApplyThemeItemPalette(item);
+        item.Selected += (_, _) => ApplyThemeItemPalette(item);
+        item.Unselected += (_, _) => ApplyThemeItemPalette(item);
+        return item;
+    }
+
+    private void ApplyThemeSelectorPalette()
+    {
+        _themeMode.Background = _theme.Card;
+        _themeMode.Foreground = _theme.Foreground;
+        _themeMode.BorderBrush = _theme.Border;
+        _themeMode.Resources[System.Windows.SystemColors.WindowBrushKey] = _theme.Card;
+        _themeMode.Resources[System.Windows.SystemColors.ControlBrushKey] = _theme.Card;
+        _themeMode.Resources[System.Windows.SystemColors.WindowTextBrushKey] = _theme.Foreground;
+        _themeMode.Resources[System.Windows.SystemColors.ControlTextBrushKey] = _theme.Foreground;
+        _themeMode.Resources[System.Windows.SystemColors.HighlightBrushKey] = _theme.Selection;
+        _themeMode.Resources[System.Windows.SystemColors.HighlightTextBrushKey] = _theme.AccentForeground;
+
+        foreach (var item in _themeMode.Items.OfType<WpfComboBoxItem>())
+            ApplyThemeItemPalette(item);
+    }
+
+    private void ApplyThemeItemPalette(WpfComboBoxItem item)
+    {
+        item.Background = _theme.Card;
+        item.Foreground = _theme.Foreground;
+        item.BorderBrush = _theme.Border;
+        if (!item.IsSelected) return;
+        item.Background = _theme.Selection;
+        item.Foreground = _theme.AccentForeground;
+    }
 
     private System.Windows.FrameworkElement BuildBody()
     {
@@ -553,6 +594,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         Background = _theme.Background;
         Foreground = _theme.Foreground;
         _browser.ApplyTheme(_theme);
+        ApplyThemeSelectorPalette();
         SelectThemeMode(mode);
         UpdateNavigationState();
     }
