@@ -135,6 +135,9 @@ jobs:
       - name: QS3D UI theme and styling guard
         shell: pwsh
         run: ./scripts/validate-ui-theme.ps1
+      - name: AutoCAD MCP tooling/function-calling parity guard
+        shell: pwsh
+        run: ./scripts/validate-autocad-mcp-parity.ps1
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
