@@ -28,17 +28,22 @@ foreach ($requirement in @(
     'actions/upload-artifact@v7',
     "if: github.event_name == 'push'",
     'QS3D-AutoCAD-native-candidate-${{ github.sha }}',
-    'artifacts/QS3D-AutoCAD-0.0.0-ci.zip',
-    'artifacts/QS3D-AutoCAD-0.0.0-ci-Setup.exe',
+    'ENGINEERING_VERSION: 0.1.0-ci.${{ github.run_number }}',
+    'artifacts/QS3D-AutoCAD-${{ env.ENGINEERING_VERSION }}.zip',
+    'artifacts/QS3D-AutoCAD-${{ env.ENGINEERING_VERSION }}-Setup.exe',
     'artifacts/RELEASE-PROVENANCE.json',
     'artifacts/SHA256SUMS.txt',
     'if-no-files-found: error',
+    'Candidate version: $env:ENGINEERING_VERSION',
     'Candidate source SHA: ${{ github.sha }}',
     'not a signed commercial release and not native PASS'
 )) {
     if (-not $ciWorkflow.Contains($requirement, [StringComparison]::Ordinal)) {
         throw "Native candidate handoff regression: CI workflow is missing '$requirement'."
     }
+}
+if ($ciWorkflow.Contains('0.0.0-ci', [StringComparison]::Ordinal)) {
+    throw 'Native candidate handoff regression: CI workflow still contains the obsolete fixed 0.0.0-ci artifact version.'
 }
 $packageStepIndex = $ciWorkflow.IndexOf('Package and verify release contract', [StringComparison]::Ordinal)
 $uploadStepIndex = $ciWorkflow.IndexOf('Upload verified engineering native candidate', [StringComparison]::Ordinal)

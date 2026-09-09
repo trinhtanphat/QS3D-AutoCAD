@@ -7,7 +7,29 @@ using System.Security.Principal;
 
 const string ResourceName = "QS3D.BundleZip";
 
+ConfigureConsole(args);
 return await RunAsync(args);
+
+static void ConfigureConsole(string[] args)
+{
+    if (!OperatingSystem.IsWindows())
+    {
+        return;
+    }
+
+    var keepConsole = args.Any(arg =>
+        arg.Equals("--quiet", StringComparison.OrdinalIgnoreCase) ||
+        arg.Equals("--help", StringComparison.OrdinalIgnoreCase) ||
+        arg.Equals("-h", StringComparison.OrdinalIgnoreCase) ||
+        arg.Equals("/?", StringComparison.OrdinalIgnoreCase));
+
+    if (!keepConsole && NativeMethods.GetConsoleWindow() != IntPtr.Zero)
+    {
+        Console.SetOut(TextWriter.Null);
+        Console.SetError(TextWriter.Null);
+        _ = NativeMethods.FreeConsole();
+    }
+}
 
 static async Task<int> RunAsync(string[] args)
 {
@@ -654,6 +676,13 @@ internal sealed record SetupOptions(
 
 internal static class NativeMethods
 {
+    [DllImport("kernel32.dll")]
+    internal static extern IntPtr GetConsoleWindow();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool FreeConsole();
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 }

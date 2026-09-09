@@ -61,10 +61,12 @@ jobs:
           & git merge-base --is-ancestor $sourceSha origin/main
           if ($LASTEXITCODE -ne 0) { throw "Candidate SHA $sourceSha is not on current main." }
 
+          $engineeringVersion = "0.1.0-ci.$ciRunNumber"
           "SOURCE_SHA=$sourceSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "CI_RUN_ID=$ciRunId" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "CI_RUN_NUMBER=$ciRunNumber" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "Publishing exact-main engineering candidate $sourceSha from CI #$ciRunNumber / run $ciRunId"
+          "ENGINEERING_VERSION=$engineeringVersion" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Publishing exact-main engineering candidate $engineeringVersion at $sourceSha from CI #$ciRunNumber / run $ciRunId"
 
       - name: Download exact verified CI candidate
         shell: pwsh
@@ -78,8 +80,11 @@ jobs:
       - name: Re-verify provenance and checksums
         shell: pwsh
         run: |
-          ./scripts/verify-artifacts.ps1 -Version '0.0.0-ci' -ExpectedCommit $env:SOURCE_SHA
+          ./scripts/verify-artifacts.ps1 -Version $env:ENGINEERING_VERSION -ExpectedCommit $env:SOURCE_SHA
           $manifest = Get-Content -Raw artifacts/RELEASE-PROVENANCE.json | ConvertFrom-Json
+          if ([string]$manifest.version -ne $env:ENGINEERING_VERSION) {
+            throw "Engineering provenance version mismatch: expected $env:ENGINEERING_VERSION, got $($manifest.version)."
+          }
           if ($manifest.signed -ne $false) {
             throw 'Engineering publication expects the unsigned CI candidate; signed production release uses release.yml.'
           }
@@ -94,14 +99,15 @@ jobs:
           Engineering test build produced and verified by exact-main CI #$env:CI_RUN_NUMBER.
 
           Source SHA: $env:SOURCE_SHA
+          Artifact version: $env:ENGINEERING_VERSION
 
           This prerelease is for installation/runtime testing in licensed AutoCAD only. It is unsigned, is not a signed commercial release, and is not native PASS. Production publication remains gated by native acceptance plus Authenticode signing in release.yml.
 
           Included assets: Setup.exe, portable AutoCAD bundle ZIP, RELEASE-PROVENANCE.json, and SHA256SUMS.txt.
           "@
           $assets = @(
-            'artifacts/QS3D-AutoCAD-0.0.0-ci-Setup.exe',
-            'artifacts/QS3D-AutoCAD-0.0.0-ci.zip',
+            "artifacts/QS3D-AutoCAD-$env:ENGINEERING_VERSION-Setup.exe",
+            "artifacts/QS3D-AutoCAD-$env:ENGINEERING_VERSION.zip",
             'artifacts/RELEASE-PROVENANCE.json',
             'artifacts/SHA256SUMS.txt'
           )
@@ -163,5 +169,5 @@ jobs:
           if ($tagSha -ne $env:SOURCE_SHA) {
             throw "Engineering tag target mismatch: expected $env:SOURCE_SHA, got $tagSha"
           }
-          Write-Host "Published GitHub prerelease/tag $tag at exact source SHA $env:SOURCE_SHA"
+          Write-Host "Published GitHub prerelease/tag $tag at exact source SHA $env:SOURCE_SHA with artifact version $env:ENGINEERING_VERSION"
           Write-Host 'This is an engineering test release, not a signed commercial release and not native PASS.'
