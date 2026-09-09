@@ -28,14 +28,15 @@ namespace System.Diagnostics.CodeAnalysis
 }
 #endif
 
-namespace QS3D.AutoCAD.Infrastructure.Mcp;
-
-internal static class McpDictionaryCompatibility
+namespace QS3D.AutoCAD.Infrastructure.Mcp
 {
-    internal static bool TryAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
+    internal static class McpDictionaryCompatibility
     {
-        if (dictionary.ContainsKey(key)) return false;
-        dictionary.Add(key, value);
-        return true;
+        internal static bool TryAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
+        {
+            if (dictionary.ContainsKey(key)) return false;
+            dictionary.Add(key, value);
+            return true;
+        }
     }
 }
