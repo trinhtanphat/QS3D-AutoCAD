@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "bricsCadBaseline": "5e198b249b45795f865f980eb7e1344cb05e0f84",
+  "autoCadBaseline": "961ad5dde768f925d0f839803229da5a8e51ee14",
+  "safeDefaults": {
+    "publicTransportEnabled": false,
+    "publicPublishEnabled": false,
+    "foregroundControlEnabled": false,
+    "paidServiceAutoActivation": false
+  },
+  "families": [
+    { "id": "agent-center-first-run-settings", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpFirstRunExperience.cs", "src/QS3D.AutoCAD/UI/McpAgentCenterWindow.cs"] },
+    { "id": "background-host-semantic-ui", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpBackgroundHostRuntime.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpBackgroundSemanticUiRuntime.cs"] },
+    { "id": "embedded-server-v2-watchdog-local-agent", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpEmbeddedServerV2.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpRuntimeWatchdog.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpLocalAgentClient.cs"] },
+    { "id": "public-cloudflare-secure-tunnel", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpPublicEndpointResolver.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpCloudflareOnboarding.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpSecureTunnelRuntime.cs"] },
+    { "id": "oauth-authorization-consent", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpOAuthAuthorizationServer.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpOAuthConsentStore.cs"] },
+    { "id": "popup-recovery-self-healing-provenance", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpPopupWindowClassifier.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpPopupObserver.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpProjectRecovery.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpSelfHealingRepair.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/McpRuntimeBuildProvenance.cs"] },
+    { "id": "desktop-control-session", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpDesktopControlSession.cs"] },
+    { "id": "transport-profiles-agent-center", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/McpTransportProfileRegistry.cs"] },
+    { "id": "qs3d-code-host-local-ipc", "status": "pending", "paths": ["src/QS3D.AutoCAD/Infrastructure/Mcp/Qs3dCodeHostContracts.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/Qs3dCodeHostBridge.cs", "src/QS3D.AutoCAD/Infrastructure/Mcp/Qs3dCodeHostLocalIpcServer.cs"] },
+    { "id": "ribbon-command-integration", "status": "pending", "paths": ["src/QS3D.AutoCAD/Commands/McpAgentCenterCommand.cs"] }
+  ]
+}
