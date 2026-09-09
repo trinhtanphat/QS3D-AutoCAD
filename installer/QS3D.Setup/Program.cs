@@ -25,6 +25,8 @@ static void ConfigureConsole(string[] args)
 
     if (!keepConsole && NativeMethods.GetConsoleWindow() != IntPtr.Zero)
     {
+        Console.SetOut(TextWriter.Null);
+        Console.SetError(TextWriter.Null);
         _ = NativeMethods.FreeConsole();
     }
 }
