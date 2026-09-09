@@ -46,6 +46,7 @@ internal static class Qs3dCommandCatalog
         new("QS3DBOQ", "boq", SectionReview, "boq quantity takeoff khoi luong", true),
         new("QS3DREFRESH", "refresh", SectionReview, "refresh browser workspace lam moi"),
         new("QS3DRIBBON", "ribbon", SectionSystem, "ribbon tab workspace"),
+        new("QS3DUPDATE", "update", SectionSystem, "update upgrade download install release cap nhat tai cai dat", true),
         new("QS3DABOUT", "about", SectionSystem, "about runtime clr version", true),
         new("QS3D", "workspace", SectionSystem, "open workspace palette qs3d")
     ];

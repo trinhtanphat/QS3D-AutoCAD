@@ -8,6 +8,7 @@
         <Command Global="QS3D" Local="QS3D" />
         <Command Global="QS3DABOUT" Local="QS3DABOUT" />
         <Command Global="QS3DRIBBON" Local="QS3DRIBBON" />
+        <Command Global="QS3DUPDATE" Local="QS3DUPDATE" />
         <Command Global="QS3DINIT" Local="QS3DINIT" />
         <Command Global="QS3DLEVEL" Local="QS3DLEVEL" />
         <Command Global="QS3DGRID" Local="QS3DGRID" />
@@ -52,6 +53,7 @@
         <Command Global="QS3D" Local="QS3D" />
         <Command Global="QS3DABOUT" Local="QS3DABOUT" />
         <Command Global="QS3DRIBBON" Local="QS3DRIBBON" />
+        <Command Global="QS3DUPDATE" Local="QS3DUPDATE" />
         <Command Global="QS3DINIT" Local="QS3DINIT" />
         <Command Global="QS3DLEVEL" Local="QS3DLEVEL" />
         <Command Global="QS3DGRID" Local="QS3DGRID" />
@@ -96,6 +98,7 @@
         <Command Global="QS3D" Local="QS3D" />
         <Command Global="QS3DABOUT" Local="QS3DABOUT" />
         <Command Global="QS3DRIBBON" Local="QS3DRIBBON" />
+        <Command Global="QS3DUPDATE" Local="QS3DUPDATE" />
         <Command Global="QS3DINIT" Local="QS3DINIT" />
         <Command Global="QS3DLEVEL" Local="QS3DLEVEL" />
         <Command Global="QS3DGRID" Local="QS3DGRID" />
