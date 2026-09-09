@@ -8,7 +8,7 @@ internal static class McpCadMutationCoordinator
 
     internal static IDisposable EnterMutation(string? writerToken, string tool, Action<string>? audit = null)
     {
-        var token = string.IsNullOrWhiteSpace(writerToken) ? "anonymous" : writerToken.Trim();
+        var token = string.IsNullOrWhiteSpace(writerToken) ? "anonymous" : writerToken!.Trim();
         if (token.Length > 128) throw new InvalidOperationException("writerToken exceeds 128 characters.");
         if (!Monitor.TryEnter(MutationGate, 7000))
             throw new InvalidOperationException("Another MCP mutation writer is still active; retry later.");
