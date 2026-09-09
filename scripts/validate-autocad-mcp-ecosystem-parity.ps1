@@ -46,7 +46,7 @@ foreach ($id in $requiredFamilies) {
     if ($null -eq $family.paths -or $family.paths.Count -eq 0) { throw "Implemented MCP family has no source paths: $id" }
     foreach ($relative in $family.paths) {
       $path = Join-Path $root ([string]$relative)
-      if (-not (Test-Path $path)) { throw "Implemented MCP ecosystem path is missing for $id: $relative" }
+      if (-not (Test-Path $path)) { throw "Implemented MCP ecosystem path is missing for ${id}: $relative" }
     }
   }
 }
