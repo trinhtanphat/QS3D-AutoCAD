@@ -22,6 +22,8 @@ if (-not $setupProject.Contains('<OutputType>Exe</OutputType>', [StringCompariso
 foreach ($required in @(
     'ConfigureConsole(args);',
     'static void ConfigureConsole(string[] args)',
+    'Console.SetOut(TextWriter.Null);',
+    'Console.SetError(TextWriter.Null);',
     'NativeMethods.FreeConsole()',
     '"--quiet"',
     '"--help"'
