@@ -135,6 +135,7 @@ internal static class McpCadAgentRuntime
     {
         _automationStopped = true;
         Interlocked.Increment(ref _automationEpoch);
+        McpDesktopAutomationRuntime.DisableForeground("emergency-stop");
         McpCadMutationCoordinator.Reset();
         McpDiagnosticHub.Log("cad_agent_stop", "automation emergency stop engaged");
         return McpJson.Serialize(new Dictionary<string, object?> { ["stopped"] = true, ["epoch"] = _automationEpoch });

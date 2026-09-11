@@ -1,0 +1,40 @@
+name: MCP Ecosystem Parity
+
+on:
+  push:
+    branches:
+      - "agent/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-ecosystem-parity-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify exact checkout SHA
+        shell: pwsh
+        run: |
+          $expected = '${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'.ToLowerInvariant()
+          $actual = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Checkout SHA mismatch: expected $expected, actual $actual" }
+          Write-Host "Exact source SHA: $actual"
+      - name: AutoCAD MCP tooling/function-calling parity guard
+        shell: pwsh
+        run: ./scripts/validate-autocad-mcp-parity.ps1
+      - name: AutoCAD MCP ecosystem parity guard
+        shell: pwsh
+        run: ./scripts/validate-autocad-mcp-ecosystem-parity.ps1

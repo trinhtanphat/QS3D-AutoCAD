@@ -74,9 +74,9 @@ internal static class McpToolRegistry
             Mutate("theme_set", "Set QS3D UI theme mode: System, Light or Dark.", "\"mode\":{\"type\":\"string\",\"enum\":[\"System\",\"Light\",\"Dark\"]}", "\"mode\",\"confirmMutation\""),
             Read("autocad_interaction_policy_get", "Read local desktop/UI consent policy."),
             Mutate("autocad_interaction_policy_set", "Set desktop/UI policy within the locally-authorized consent ceiling.", "\"enabled\":{\"type\":\"boolean\"}", "\"enabled\",\"confirmMutation\""),
-            Read("autocad_ui_text_snapshot", "Read bounded QS3D/AutoCAD UI text metadata without screen OCR."),
-            Mutate("autocad_ui_invoke", "Invoke one existing QS3D command by catalog name.", "\"command\":{\"type\":\"string\",\"maxLength\":80}", "\"command\",\"confirmMutation\""),
-            Mutate("autocad_ui_set_text", "Set text only on a supported QS3D UI target; unsupported targets fail closed.", "\"target\":{\"type\":\"string\",\"maxLength\":80},\"text\":{\"type\":\"string\",\"maxLength\":8000}", "\"target\",\"text\",\"confirmMutation\""),
+            Read("autocad_ui_text_snapshot", "Read bounded same-process QS3D/AutoCAD UI metadata without screen OCR.", Object("\"windowHandle\":{\"type\":\"string\",\"maxLength\":32},\"maxDepth\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":8},\"maxNodes\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":200}")),
+            Mutate("autocad_ui_invoke", "Invoke a QS3D command or one freshly-discovered same-process UI control.", "\"command\":{\"type\":\"string\",\"maxLength\":80},\"controlHandle\":{\"type\":\"string\",\"maxLength\":32},\"expectedDiscoveryGeneration\":{\"type\":\"integer\",\"minimum\":1}", "\"confirmMutation\""),
+            Mutate("autocad_ui_set_text", "Set bounded text on a supported QS3D target or freshly-discovered same-process Edit control.", "\"target\":{\"type\":\"string\",\"maxLength\":80},\"controlHandle\":{\"type\":\"string\",\"maxLength\":32},\"expectedDiscoveryGeneration\":{\"type\":\"integer\",\"minimum\":1},\"text\":{\"type\":\"string\",\"maxLength\":8000}", "\"text\",\"confirmMutation\""),
 
             Read("desktop_cursor_position", "Read current Windows desktop cursor position."),
             Read("desktop_window_list", "List visible top-level windows in the current interactive session.", Object("\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100}")),
