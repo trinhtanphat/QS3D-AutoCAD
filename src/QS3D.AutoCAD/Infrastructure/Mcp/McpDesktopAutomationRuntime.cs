@@ -56,8 +56,6 @@ internal static class McpDesktopAutomationRuntime
         "desktop_clipboard_read", "desktop_screenshot", "desktop_ui_tree"
     };
 
-    private static readonly string ConsentPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QS3D", "MCP", "desktop-consent.txt");
     private static volatile bool _interactionEnabled;
 
     internal static bool IsTool(string? tool) => Tools.Contains(tool ?? string.Empty);
@@ -78,7 +76,7 @@ internal static class McpDesktopAutomationRuntime
             "theme_set" => ThemeSet(body),
             "autocad_interaction_policy_get" => InteractionPolicyGet(),
             "autocad_interaction_policy_set" => InteractionPolicySet(body),
-            "autocad_ui_text_snapshot" => AutoCadUiTextSnapshot(),
+            "autocad_ui_text_snapshot" => AutoCadUiTextSnapshot(body),
             "autocad_ui_invoke" => AutoCadUiInvoke(body),
             "autocad_ui_set_text" => AutoCadUiSetText(body),
             "desktop_cursor_position" => CursorPosition(),
@@ -145,37 +143,40 @@ internal static class McpDesktopAutomationRuntime
     private static string InteractionPolicyGet() => McpJson.Serialize(new Dictionary<string, object?>
     {
         ["enabled"] = _interactionEnabled,
-        ["localConsentPresent"] = LocalConsentPresent(),
-        ["consentPath"] = ConsentPath,
-        ["rule"] = "Enabling remote desktop/UI automation requires a local file whose exact text is ALLOW_DESKTOP_AUTOMATION."
+        ["mode"] = _interactionEnabled ? "foreground_local_consent" : "background_only",
+        ["consent"] = McpJson.Parse(McpDesktopControlSession.SnapshotJson()),
+        ["rule"] = "Remote MCP calls may select background_only only; foreground requires explicit local process-scoped consent."
     });
 
     private static string InteractionPolicySet(string body)
     {
         if (!McpTopLevelJson.TryGetBoolean(body, "enabled", out var enabled)) throw new InvalidOperationException("enabled boolean is required.");
-        if (enabled && !LocalConsentPresent()) throw new InvalidOperationException("Local desktop consent is not present; policy cannot be enabled remotely.");
-        _interactionEnabled = enabled;
-        McpDiagnosticHub.Log("autocad_interaction_policy_set", "enabled=" + enabled.ToString(CultureInfo.InvariantCulture));
+        if (enabled) throw new InvalidOperationException("Remote MCP calls cannot enable foreground desktop control; use the local QS3D Agent Center.");
+        DisableForeground("remote-background-only");
         return InteractionPolicyGet();
     }
 
-    private static bool LocalConsentPresent()
+    internal static void EnableForegroundFromLocalUser(string reason)
     {
-        try
-        {
-            if (!File.Exists(ConsentPath) || new FileInfo(ConsentPath).Length > 128) return false;
-            return string.Equals(File.ReadAllText(ConsentPath).Trim(), "ALLOW_DESKTOP_AUTOMATION", StringComparison.Ordinal);
-        }
-        catch { return false; }
+        McpDesktopControlSession.EnableFromLocalUser(reason);
+        _interactionEnabled = true;
+        McpDiagnosticHub.Log("autocad-interaction-policy", "foreground enabled by explicit local consent");
+    }
+
+    internal static void DisableForeground(string reason)
+    {
+        _interactionEnabled = false;
+        McpDesktopControlSession.Disable(reason);
     }
 
     private static void RequireLocalConsent(string tool)
     {
-        if (!_interactionEnabled || !LocalConsentPresent())
-            throw new InvalidOperationException(tool + " requires local QS3D desktop consent and an enabled interaction policy.");
+        if (!_interactionEnabled)
+            throw new InvalidOperationException(tool + " requires foreground policy enabled from the local QS3D Agent Center.");
+        McpDesktopControlSession.RequireLocalConsent(tool);
     }
 
-    private static string AutoCadUiTextSnapshot() => McpDiagnosticHub.InvokeInCadContext(() =>
+    private static string AutoCadUiTextSnapshot(string body) => McpDiagnosticHub.InvokeInCadContext(() =>
     {
         var document = AcApplication.DocumentManager.MdiActiveDocument;
         var commands = Qs3dCommandCatalog.All.Take(100).Select(item => new Dictionary<string, object?>
@@ -184,11 +185,18 @@ internal static class McpDesktopAutomationRuntime
         }).ToList();
         return McpJson.Serialize(new Dictionary<string, object?>
         {
-            ["host"] = "AutoCAD", ["document"] = document?.Name, ["qs3dCommands"] = commands, ["count"] = commands.Count
+            ["host"] = "AutoCAD",
+            ["document"] = document?.Name,
+            ["qs3dCommands"] = commands,
+            ["count"] = commands.Count,
+            ["semantic"] = McpJson.Parse(McpBackgroundSemanticUiRuntime.Discover(body))
         });
     });
 
-    private static string AutoCadUiInvoke(string body) => McpQs3dDomainRuntime.Call("qs3d_run_command", body);
+    private static string AutoCadUiInvoke(string body) =>
+        McpTopLevelJson.ExtractString(body, "controlHandle").Length > 0
+            ? McpBackgroundSemanticUiRuntime.Invoke(body)
+            : McpQs3dDomainRuntime.Call("qs3d_run_command", body);
 
     private static string AutoCadUiSetText(string body)
     {

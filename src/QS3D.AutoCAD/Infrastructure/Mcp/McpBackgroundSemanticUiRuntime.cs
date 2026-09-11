@@ -54,7 +54,6 @@ internal static class McpBackgroundSemanticUiRuntime
         var cls = McpPopupWindowClassifier.ClassName(hwnd);
         if (!string.Equals(cls, "Button", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Only an exact standard Button semantic target is currently invokable in background mode.");
-        McpDesktopControlSession.RequireLocalConsent("autocad_ui_invoke");
         var result = SendMessageTimeout(hwnd, 0x00F5, IntPtr.Zero, IntPtr.Zero, 0x0002, 2000, out _);
         if (result == IntPtr.Zero)
             throw new InvalidOperationException("Semantic provider outcome is uncertain; no automatic retry. Inspect the actionId acknowledgement before recovery.");
@@ -65,6 +64,41 @@ internal static class McpBackgroundSemanticUiRuntime
             ["controlHandle"] = Handle(hwnd),
             ["requiresRediscovery"] = true,
             ["retryAllowed"] = false
+        });
+    }
+
+    internal static string SetText(string body)
+    {
+        var text = McpTopLevelJson.ExtractString(body, "text");
+        if (text.Length > 8000 || text.IndexOf('\0') >= 0)
+            throw new InvalidOperationException("Semantic text must be bounded and contain no NUL characters.");
+        var expected = McpTopLevelJson.OptionalInt(body, "expectedDiscoveryGeneration", 0, 0, int.MaxValue);
+        var handleText = McpTopLevelJson.ExtractString(body, "controlHandle");
+        if (!long.TryParse(handleText, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var raw))
+            throw new InvalidOperationException("controlHandle must be a hexadecimal same-process HWND.");
+        var hwnd = new IntPtr(raw);
+        if (!McpPopupWindowClassifier.BelongsToCurrentProcess(hwnd))
+            throw new InvalidOperationException("Semantic target must belong to the current AutoCAD process.");
+        lock (Sync)
+        {
+            if (_last is null || _last.Generation != expected)
+                throw new InvalidOperationException("expectedDiscoveryGeneration is stale; request fresh semantic discovery.");
+            _last = null;
+        }
+        if (!string.Equals(McpPopupWindowClassifier.ClassName(hwnd), "Edit", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only an exact standard Edit semantic target accepts background text updates.");
+        var buffer = Marshal.StringToHGlobalUni(text);
+        try
+        {
+            var result = SendMessageTimeout(hwnd, 0x000C, IntPtr.Zero, buffer, 0x0002, 2000, out _);
+            if (result == IntPtr.Zero)
+                throw new InvalidOperationException("Semantic provider outcome is uncertain; no automatic retry. Inspect the actionId acknowledgement before recovery.");
+        }
+        finally { Marshal.FreeHGlobal(buffer); }
+        return McpJson.Serialize(new Dictionary<string, object?>
+        {
+            ["updated"] = true, ["background"] = true, ["controlHandle"] = Handle(hwnd),
+            ["characterCount"] = text.Length, ["requiresRediscovery"] = true, ["retryAllowed"] = false
         });
     }
 

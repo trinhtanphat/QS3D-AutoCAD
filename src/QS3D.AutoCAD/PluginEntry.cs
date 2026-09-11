@@ -16,6 +16,7 @@ public sealed class PluginEntry : IExtensionApplication
         try
         {
             McpDiagnosticHub.InitializeForPlugin();
+            McpDesktopAutomationRuntime.DisableForeground("process-start");
             McpEcosystemSettings.Load();
             McpCloudflareOnboarding.Load();
             McpEmbeddedServerV2.EnsureStarted();

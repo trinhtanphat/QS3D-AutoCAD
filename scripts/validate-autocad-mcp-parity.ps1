@@ -116,11 +116,14 @@ foreach ($token in $requiredTokens) {
     }
 }
 
-if ($plugin -notmatch 'McpEmbeddedServer\.Start') {
-    throw 'PluginEntry must start the embedded AutoCAD MCP server.'
+$v2Path = Join-Path $mcpRoot 'McpEmbeddedServerV2.cs'
+if (-not (Test-Path $v2Path)) { throw 'McpEmbeddedServerV2 lifecycle facade is missing.' }
+$v2 = Get-Content -Raw $v2Path
+if ($plugin -notmatch 'McpEmbeddedServerV2\.EnsureStarted' -or $v2 -notmatch 'McpEmbeddedServer\.Start') {
+    throw 'PluginEntry must start the canonical embedded AutoCAD MCP server through V2.'
 }
-if ($plugin -notmatch 'McpEmbeddedServer\.Stop') {
-    throw 'PluginEntry must stop the embedded AutoCAD MCP server during termination.'
+if ($plugin -notmatch 'McpEmbeddedServerV2\.Stop' -or $v2 -notmatch 'McpEmbeddedServer\.Stop') {
+    throw 'PluginEntry must stop the canonical embedded AutoCAD MCP server through V2.'
 }
 
 Write-Host 'AutoCAD MCP tooling/function-calling parity guard passed.'
