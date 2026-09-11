@@ -241,7 +241,16 @@ internal static class McpEmbeddedServer
 
     private static void HandleRequest(NetworkStream stream, HttpRequest request)
     {
-        var path = request.Path.Split('?')[0];
+        var queryIndex = request.Path.IndexOf('?');
+        var path = queryIndex >= 0 ? request.Path.Substring(0, queryIndex) : request.Path;
+        var query = queryIndex >= 0 ? request.Path.Substring(queryIndex + 1) : string.Empty;
+
+        if (McpOAuthAuthorizationServer.TryHandle(request.Method, path, query, request.Headers, request.Body, out var oauthResponse))
+        {
+            WriteOAuthResponse(stream, oauthResponse);
+            return;
+        }
+
         if (string.Equals(path, "/healthz", StringComparison.Ordinal))
         {
             if (!string.Equals(request.Method, "GET", StringComparison.OrdinalIgnoreCase))
@@ -274,7 +283,9 @@ internal static class McpEmbeddedServer
 
         if (!Authorized(request.Headers))
         {
-            WriteResponse(stream, 401, "Unauthorized", "{\"error\":\"invalid bearer token\"}", "Bearer");
+            var publicMcpUrl = McpPublicEndpointResolver.Resolve();
+            var challenge = publicMcpUrl.Length == 0 ? "Bearer" : McpOAuthAuthorizationServer.BuildBearerChallenge(publicMcpUrl);
+            WriteResponse(stream, 401, "Unauthorized", "{\"error\":\"invalid bearer token\"}", challenge);
             return;
         }
 
@@ -429,7 +440,9 @@ internal static class McpEmbeddedServer
         const string prefix = "Bearer ";
         if (!authorization.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
         var supplied = authorization.Substring(prefix.Length).Trim();
-        return FixedTimeEquals(supplied, GetBearerToken());
+        if (FixedTimeEquals(supplied, GetBearerToken())) return true;
+        var publicMcpUrl = McpPublicEndpointResolver.Resolve();
+        return publicMcpUrl.Length > 0 && McpOAuthAuthorizationServer.TryValidateAccessToken(headers, publicMcpUrl);
     }
 
     private static bool FixedTimeEquals(string left, string right)
@@ -514,6 +527,27 @@ internal static class McpEmbeddedServer
             .Append("Cache-Control: no-store\r\n")
             .Append("Connection: close\r\n");
         if (!string.IsNullOrWhiteSpace(authenticateScheme)) header.Append("WWW-Authenticate: ").Append(authenticateScheme).Append("\r\n");
+        header.Append("\r\n");
+        var headerBytes = Encoding.ASCII.GetBytes(header.ToString());
+        stream.Write(headerBytes, 0, headerBytes.Length);
+        if (payload.Length > 0) stream.Write(payload, 0, payload.Length);
+        stream.Flush();
+    }
+
+    private static void WriteOAuthResponse(NetworkStream stream, McpOAuthHttpResponse response)
+    {
+        var payload = Encoding.UTF8.GetBytes(response.Body ?? string.Empty);
+        var header = new StringBuilder()
+            .Append("HTTP/1.1 ").Append(response.StatusCode.ToString(CultureInfo.InvariantCulture)).Append(' ').Append(response.Reason).Append("\r\n")
+            .Append("Content-Type: ").Append(response.ContentType).Append("\r\n")
+            .Append("Content-Length: ").Append(payload.Length.ToString(CultureInfo.InvariantCulture)).Append("\r\n")
+            .Append("Connection: close\r\n");
+        if (!response.Headers.ContainsKey("Cache-Control")) header.Append("Cache-Control: no-store\r\n");
+        foreach (var pair in response.Headers)
+        {
+            if (pair.Key.IndexOfAny(new[] { '\r', '\n', ':' }) >= 0 || pair.Value.IndexOfAny(new[] { '\r', '\n' }) >= 0) continue;
+            header.Append(pair.Key).Append(": ").Append(pair.Value).Append("\r\n");
+        }
         header.Append("\r\n");
         var headerBytes = Encoding.ASCII.GetBytes(header.ToString());
         stream.Write(headerBytes, 0, headerBytes.Length);

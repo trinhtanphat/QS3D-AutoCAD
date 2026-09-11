@@ -60,12 +60,14 @@ internal static class McpOAuthConsentStore
     private static string BuildKey(string clientId, string redirectUri, string scope)
     {
         var client = (clientId ?? string.Empty).Trim();
+        var redirect = (redirectUri ?? string.Empty).Trim();
+        var normalizedScope = (scope ?? string.Empty).Trim();
         if (client.Length == 0 || client.Length > 128) throw new InvalidOperationException("OAuth client id is invalid.");
-        if (!McpOAuthAuthorizationServer.IsAllowedLoopbackRedirect(redirectUri))
+        if (!McpOAuthAuthorizationServer.IsAllowedLoopbackRedirect(redirect))
             throw new InvalidOperationException("OAuth redirect must be an allow-listed loopback URI.");
-        if (!string.Equals((scope ?? string.Empty).Trim(), McpOAuthAuthorizationServer.RequiredScope, StringComparison.Ordinal))
+        if (!string.Equals(normalizedScope, McpOAuthAuthorizationServer.RequiredScope, StringComparison.Ordinal))
             throw new InvalidOperationException("OAuth scope is not supported.");
-        return client + "\n" + redirectUri.Trim() + "\n" + scope.Trim();
+        return client + "\n" + redirect + "\n" + normalizedScope;
     }
 
     private static string Bound(string? value, int max)

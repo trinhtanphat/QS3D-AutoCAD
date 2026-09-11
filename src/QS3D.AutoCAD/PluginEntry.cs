@@ -17,6 +17,7 @@ public sealed class PluginEntry : IExtensionApplication
         {
             McpDiagnosticHub.InitializeForPlugin();
             McpEcosystemSettings.Load();
+            McpCloudflareOnboarding.Load();
             McpEmbeddedServerV2.EnsureStarted();
             McpRuntimeWatchdog.Start();
             McpTransportSupervisor.Start();
@@ -36,6 +37,8 @@ public sealed class PluginEntry : IExtensionApplication
     public void Terminate()
     {
         try { McpTransportSupervisor.Stop(); } catch { }
+        try { McpSecureTunnelRuntime.StopForHostShutdown(); } catch { }
+        try { McpOAuthConsentStore.RevokeAll("host-shutdown"); } catch { }
         try { McpRuntimeWatchdog.Stop(); } catch { }
         try { McpEmbeddedServerV2.Stop(); } catch { }
     }

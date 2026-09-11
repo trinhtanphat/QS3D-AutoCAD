@@ -84,9 +84,13 @@ internal static class McpOAuthAuthorizationServer
 
         if (string.Equals(path, "/oauth/authorize", StringComparison.OrdinalIgnoreCase))
         {
-            response = !string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase)
-                ? OAuthError(405, "Method Not Allowed", "invalid_request", "authorization requires GET")
-                : Authorize(query, publicMcpUrl);
+            if (!string.Equals(method, "GET", StringComparison.OrdinalIgnoreCase))
+                response = OAuthError(405, "Method Not Allowed", "invalid_request", "authorization requires GET");
+            else
+            {
+                try { response = Authorize(query, publicMcpUrl); }
+                catch (InvalidOperationException ex) { response = OAuthError(400, "Bad Request", "invalid_request", Bound(ex.Message, 512)); }
+            }
             return true;
         }
 
@@ -103,7 +107,8 @@ internal static class McpOAuthAuthorizationServer
                 response = OAuthError(415, "Unsupported Media Type", "invalid_request", "token endpoint requires form encoding");
                 return true;
             }
-            response = ExchangeToken(body, publicMcpUrl);
+            try { response = ExchangeToken(body, publicMcpUrl); }
+            catch (InvalidOperationException ex) { response = OAuthError(400, "Bad Request", "invalid_request", Bound(ex.Message, 512)); }
             return true;
         }
 
@@ -249,9 +254,15 @@ internal static class McpOAuthAuthorizationServer
 
     private static string Value(Dictionary<string, string> form, string name, int max, bool required = true)
     {
-        if (!form.TryGetValue(name, out var value) || (required && string.IsNullOrWhiteSpace(value)) || value.Length > max)
-            throw new InvalidOperationException("OAuth parameter is missing or invalid: " + name);
-        return value ?? string.Empty;
+        if (!form.TryGetValue(name, out var value))
+        {
+            if (required) throw new InvalidOperationException("OAuth parameter is missing: " + name);
+            return string.Empty;
+        }
+        value ??= string.Empty;
+        if ((required && string.IsNullOrWhiteSpace(value)) || value.Length > max)
+            throw new InvalidOperationException("OAuth parameter is invalid: " + name);
+        return value;
     }
 
     private static bool EqualsValue(Dictionary<string, string> form, string name, string expected) =>
@@ -298,6 +309,12 @@ internal static class McpOAuthAuthorizationServer
 
     private static McpOAuthHttpResponse Json(int status, string reason, Dictionary<string, object?> body) =>
         new() { StatusCode = status, Reason = reason, Body = McpJson.Serialize(body) };
+
+    private static string Bound(string? value, int max)
+    {
+        var text = value ?? string.Empty;
+        return text.Length <= max ? text : text.Substring(0, max);
+    }
 
     private static McpOAuthHttpResponse OAuthError(int status, string reason, string error, string description) =>
         Json(status, reason, new Dictionary<string, object?> { ["error"] = error, ["error_description"] = description });
