@@ -28,9 +28,10 @@ internal static class McpRuntimeBuildProvenance
 
     private static string ExtractSha(string informational)
     {
-        var plus = (informational ?? string.Empty).LastIndexOf('+');
-        if (plus < 0 || plus + 1 >= informational.Length) return string.Empty;
-        return informational.Substring(plus + 1);
+        var value = informational ?? string.Empty;
+        var plus = value.LastIndexOf('+');
+        if (plus < 0 || plus + 1 >= value.Length) return string.Empty;
+        return value.Substring(plus + 1);
     }
 
     private static string Bound(string value, int max) =>
