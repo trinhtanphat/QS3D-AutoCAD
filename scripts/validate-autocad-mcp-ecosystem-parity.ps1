@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $root 'docs/mcp-ecosystem-parity.json'
@@ -89,7 +89,13 @@ $requiredTokens = @(
   'Qs3dCodeHostBridge',
   'requestId',
   'contractVersion',
-  'QS3DMCPAGENTCENTER'
+  'QS3DMCPAGENTCENTER',
+  'McpAgentCenterWindow',
+  'McpFirstRunExperience',
+  'MarkCompletedFromLocalUser',
+  'opensUiAutomatically',
+  'publicTransportAutoEnabled',
+  'foregroundControlAutoEnabled'
 )
 foreach ($token in $requiredTokens) {
   if ($allSource -notmatch [regex]::Escape($token)) { throw "MCP ecosystem safety/contract token is missing: $token" }
@@ -98,6 +104,14 @@ foreach ($token in $requiredTokens) {
 # Explicitly ban common unsafe activation shapes in ecosystem sources.
 $ecosystemFiles = Get-ChildItem -Path (Join-Path $sourceRoot 'Infrastructure/Mcp') -File -Filter '*.cs' -ErrorAction SilentlyContinue
 $ecosystemSource = ($ecosystemFiles | ForEach-Object { Get-Content -Raw $_.FullName }) -join "`n"
+$pluginSource = Get-Content -Raw (Join-Path $sourceRoot 'PluginEntry.cs')
+if ($pluginSource -match 'McpAgentCenterWindow') { throw 'PluginEntry must not instantiate/open Agent Center UI during startup.' }
+
+$firstRunSource = Get-Content -Raw (Join-Path $sourceRoot 'Infrastructure/Mcp/McpFirstRunExperience.cs')
+foreach ($forbiddenFirstRun in @('McpAgentCenterWindow', 'StartFromLocalUser', 'EnableForegroundFromLocalUser', 'GrantFromLocalUser')) {
+  if ($firstRunSource -match [regex]::Escape($forbiddenFirstRun)) { throw "First-run must remain reminder-only and cannot auto-activate/open sensitive MCP surfaces: $forbiddenFirstRun" }
+}
+
 foreach ($unsafe in @('Public = true; // default', 'Publish = true; // default', 'ForegroundEnabled = true; // default', 'AutoPurchase', 'TopUpCredits')) {
   if ($ecosystemSource -match [regex]::Escape($unsafe)) { throw "Unsafe automatic MCP ecosystem activation marker detected: $unsafe" }
 }

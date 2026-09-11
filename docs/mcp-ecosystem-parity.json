@@ -11,10 +11,11 @@
   "families": [
     {
       "id": "agent-center-first-run-settings",
-      "status": "pending",
+      "status": "implemented",
       "paths": [
         "src/QS3D.AutoCAD/Infrastructure/Mcp/McpFirstRunExperience.cs",
-        "src/QS3D.AutoCAD/UI/McpAgentCenterWindow.cs"
+        "src/QS3D.AutoCAD/UI/McpAgentCenterWindow.cs",
+        "src/QS3D.AutoCAD/Infrastructure/Mcp/McpEcosystemSettings.cs"
       ]
     },
     {
@@ -71,7 +72,7 @@
     },
     {
       "id": "transport-profiles-agent-center",
-      "status": "pending",
+      "status": "implemented",
       "paths": [
         "src/QS3D.AutoCAD/Infrastructure/Mcp/McpTransportProfileRegistry.cs"
       ]
@@ -87,7 +88,7 @@
     },
     {
       "id": "ribbon-command-integration",
-      "status": "pending",
+      "status": "implemented",
       "paths": [
         "src/QS3D.AutoCAD/Commands/McpAgentCenterCommand.cs"
       ]

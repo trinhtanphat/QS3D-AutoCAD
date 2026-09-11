@@ -22,6 +22,7 @@ public sealed class PluginEntry : IExtensionApplication
             McpEmbeddedServerV2.EnsureStarted();
             McpRuntimeWatchdog.Start();
             McpTransportSupervisor.Start();
+            McpFirstRunExperience.Start();
             try { McpPopupObserver.Start(); } catch (System.Exception ex) { McpDiagnosticHub.Log("popup-observer", "start failed: " + ex.Message); }
             try { McpProjectRecovery.Start(); } catch (System.Exception ex) { McpDiagnosticHub.Log("recovery", "start failed: " + ex.Message); }
             try { Qs3dCodeHostLocalIpcServer.Start(); } catch (System.Exception ex) { McpDiagnosticHub.Log("qs3d-code-host", "start failed: " + ex.Message); }
@@ -43,6 +44,7 @@ public sealed class PluginEntry : IExtensionApplication
         try { Qs3dCodeHostLocalIpcServer.Stop(); } catch { }
         try { McpProjectRecovery.Stop(); } catch { }
         try { McpPopupObserver.Stop(); } catch { }
+        try { McpFirstRunExperience.Stop(); } catch { }
         try { McpTransportSupervisor.Stop(); } catch { }
         try { McpSecureTunnelRuntime.StopForHostShutdown(); } catch { }
         try { McpOAuthConsentStore.RevokeAll("host-shutdown"); } catch { }
