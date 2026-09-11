@@ -16,7 +16,9 @@ public sealed class PluginEntry : IExtensionApplication
         try
         {
             McpDiagnosticHub.InitializeForPlugin();
-            McpEmbeddedServer.Start();
+            McpEcosystemSettings.Load();
+            McpEmbeddedServerV2.EnsureStarted();
+            McpRuntimeWatchdog.Start();
             McpTransportSupervisor.Start();
             editor?.WriteMessage(
                 "\nQS3D AutoCAD loaded. Run QS3D to open the command palette. MCP: "
@@ -34,6 +36,7 @@ public sealed class PluginEntry : IExtensionApplication
     public void Terminate()
     {
         try { McpTransportSupervisor.Stop(); } catch { }
-        try { McpEmbeddedServer.Stop(); } catch { }
+        try { McpRuntimeWatchdog.Stop(); } catch { }
+        try { McpEmbeddedServerV2.Stop(); } catch { }
     }
 }

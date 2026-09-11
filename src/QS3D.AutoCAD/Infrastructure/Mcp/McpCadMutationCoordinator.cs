@@ -6,6 +6,8 @@ internal static class McpCadMutationCoordinator
     private static string? _activeWriterToken;
     private static string? _activeTool;
 
+    internal static bool IsMutationActive => Volatile.Read(ref _activeTool) is not null;
+
     internal static IDisposable EnterMutation(string? writerToken, string tool, Action<string>? audit = null)
     {
         var token = string.IsNullOrWhiteSpace(writerToken) ? "anonymous" : writerToken!.Trim();
