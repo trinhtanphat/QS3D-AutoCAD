@@ -53,7 +53,7 @@
     },
     {
       "id": "popup-recovery-self-healing-provenance",
-      "status": "pending",
+      "status": "implemented",
       "paths": [
         "src/QS3D.AutoCAD/Infrastructure/Mcp/McpPopupWindowClassifier.cs",
         "src/QS3D.AutoCAD/Infrastructure/Mcp/McpPopupObserver.cs",

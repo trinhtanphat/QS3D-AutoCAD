@@ -113,6 +113,11 @@ internal static class McpDesktopAutomationRuntime
     {
         ["mcp"] = McpJson.Parse(McpCadAgentRuntime.Call("mcp_status", "{}")),
         ["policy"] = McpJson.Parse(InteractionPolicyGet()),
+        ["backgroundHost"] = McpJson.Parse(McpBackgroundHostRuntime.SnapshotJson()),
+        ["popupObserver"] = McpJson.Parse(McpPopupObserver.SnapshotJson()),
+        ["recovery"] = McpJson.Parse(McpProjectRecovery.SnapshotJson()),
+        ["selfHealingPlan"] = McpJson.Parse(McpSelfHealingRepair.BuildPlanJson()),
+        ["build"] = McpJson.Parse(McpRuntimeBuildProvenance.SnapshotJson()),
         ["diagnostics"] = McpJson.Parse(McpDiagnosticHub.TailJson(20))
     });
 

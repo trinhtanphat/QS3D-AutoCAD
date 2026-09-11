@@ -22,6 +22,8 @@ public sealed class PluginEntry : IExtensionApplication
             McpEmbeddedServerV2.EnsureStarted();
             McpRuntimeWatchdog.Start();
             McpTransportSupervisor.Start();
+            try { McpPopupObserver.Start(); } catch (System.Exception ex) { McpDiagnosticHub.Log("popup-observer", "start failed: " + ex.Message); }
+            try { McpProjectRecovery.Start(); } catch (System.Exception ex) { McpDiagnosticHub.Log("recovery", "start failed: " + ex.Message); }
             editor?.WriteMessage(
                 "\nQS3D AutoCAD loaded. Run QS3D to open the command palette. MCP: "
                 + McpTransportSettings.LocalEndpoint + "\n");
@@ -37,6 +39,8 @@ public sealed class PluginEntry : IExtensionApplication
 
     public void Terminate()
     {
+        try { McpProjectRecovery.Stop(); } catch { }
+        try { McpPopupObserver.Stop(); } catch { }
         try { McpTransportSupervisor.Stop(); } catch { }
         try { McpSecureTunnelRuntime.StopForHostShutdown(); } catch { }
         try { McpOAuthConsentStore.RevokeAll("host-shutdown"); } catch { }
