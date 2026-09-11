@@ -78,7 +78,7 @@
     },
     {
       "id": "qs3d-code-host-local-ipc",
-      "status": "pending",
+      "status": "implemented",
       "paths": [
         "src/QS3D.AutoCAD/Infrastructure/Mcp/Qs3dCodeHostContracts.cs",
         "src/QS3D.AutoCAD/Infrastructure/Mcp/Qs3dCodeHostBridge.cs",

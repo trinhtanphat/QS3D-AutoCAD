@@ -117,6 +117,7 @@ internal static class McpDesktopAutomationRuntime
         ["popupObserver"] = McpJson.Parse(McpPopupObserver.SnapshotJson()),
         ["recovery"] = McpJson.Parse(McpProjectRecovery.SnapshotJson()),
         ["selfHealingPlan"] = McpJson.Parse(McpSelfHealingRepair.BuildPlanJson()),
+        ["codeHost"] = McpJson.Parse(Qs3dCodeHostLocalIpcServer.StatusJson()),
         ["build"] = McpJson.Parse(McpRuntimeBuildProvenance.SnapshotJson()),
         ["diagnostics"] = McpJson.Parse(McpDiagnosticHub.TailJson(20))
     });
