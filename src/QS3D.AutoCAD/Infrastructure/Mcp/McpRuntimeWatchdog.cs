@@ -1,4 +1,5 @@
-﻿namespace QS3D.AutoCAD.Infrastructure.Mcp;
+﻿using Timer = System.Threading.Timer;
+namespace QS3D.AutoCAD.Infrastructure.Mcp;
 
 /// <summary>Bounded local-listener watchdog. It never repairs while CAD mutation or emergency stop is active.</summary>
 internal static class McpRuntimeWatchdog

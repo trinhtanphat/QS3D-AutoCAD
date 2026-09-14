@@ -1,5 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using WpfButton = System.Windows.Controls.Button;
+using WpfTextBox = System.Windows.Controls.TextBox;
 using QS3D.AutoCAD.Infrastructure.Mcp;
 
 namespace QS3D.AutoCAD.UI;
@@ -7,7 +9,7 @@ namespace QS3D.AutoCAD.UI;
 /// <summary>Thin local-user MCP operations surface. Service/runtime logic stays in Infrastructure/Mcp.</summary>
 internal sealed class McpAgentCenterWindow : Window
 {
-    private readonly TextBox _status = new()
+    private readonly WpfTextBox _status = new()
     {
         IsReadOnly = true,
         AcceptsReturn = true,
@@ -66,9 +68,9 @@ internal sealed class McpAgentCenterWindow : Window
         return root;
     }
 
-    private static Button Button(string text, RoutedEventHandler handler)
+    private static WpfButton Button(string text, RoutedEventHandler handler)
     {
-        var button = new Button { Content = text, Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 8, 8), MinWidth = 130 };
+        var button = new WpfButton { Content = text, Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 8, 8), MinWidth = 130 };
         button.Click += handler;
         return button;
     }
@@ -76,7 +78,7 @@ internal sealed class McpAgentCenterWindow : Window
     private void RunLocal(Action action)
     {
         try { action(); }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "QS3D MCP", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) { System.Windows.MessageBox.Show(this, ex.Message, "QS3D MCP", MessageBoxButton.OK, MessageBoxImage.Warning); }
         RefreshStatus();
     }
 

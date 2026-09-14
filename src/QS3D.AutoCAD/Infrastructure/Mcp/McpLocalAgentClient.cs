@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace QS3D.AutoCAD.Infrastructure.Mcp;
@@ -24,16 +26,14 @@ internal static class McpLocalAgentClient
         if (payload.Length > MaxRequestBytes) throw new InvalidOperationException("Local-agent request exceeds 1 MiB.");
         timeoutMs = Math.Max(100, Math.Min(7000, timeoutMs));
 
-        var request = WebRequest.CreateHttp(endpoint);
-        request.Method = "POST";
-        request.ContentType = "application/json";
-        request.Timeout = timeoutMs;
-        request.ReadWriteTimeout = timeoutMs;
-        request.Headers[HttpRequestHeader.Authorization] = "Bearer " + McpEmbeddedServer.GetBearerToken();
-        request.ContentLength = payload.Length;
-        using (var requestStream = request.GetRequestStream()) requestStream.Write(payload, 0, payload.Length);
-        using var response = (HttpWebResponse)request.GetResponse();
-        using var stream = response.GetResponseStream() ?? throw new InvalidOperationException("Local-agent response stream is unavailable.");
+        using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(timeoutMs) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", McpEmbeddedServer.GetBearerToken());
+        request.Content = new ByteArrayContent(payload);
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        using var response = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult();
+        response.EnsureSuccessStatusCode();
+        using var stream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
         using var memory = new MemoryStream();
         var buffer = new byte[8192];
         int read;

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -119,7 +119,7 @@ internal static class McpBackgroundHostRuntime
     {
         if (items.Count >= limit || budget <= 0) return;
         var cls = McpPopupWindowClassifier.ClassName(hwnd);
-        if (scope == "popup" && topLevel == false && !cls.IndexOf("Dialog", StringComparison.OrdinalIgnoreCase) >= 0 && cls != "#32770") return;
+        if (scope == "popup" && topLevel == false && cls.IndexOf("Dialog", StringComparison.OrdinalIgnoreCase) < 0 && cls != "#32770") return;
         if (scope == "commandline" && !LooksLikeCommandLine(cls)) return;
         var text = McpPopupWindowClassifier.WindowText(hwnd);
         if (text.Length == 0) return;

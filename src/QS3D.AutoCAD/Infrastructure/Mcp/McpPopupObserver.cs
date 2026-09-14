@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Timer = System.Threading.Timer;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
