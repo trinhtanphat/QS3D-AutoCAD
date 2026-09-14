@@ -47,6 +47,20 @@ foreach ($resourceKey in @('WindowBrushKey', 'ControlBrushKey', 'WindowTextBrush
 Require ($workspace -match 'item\.Background\s*=\s*_theme\.Card') 'theme selector items must use the active card background.'
 Require ($workspace -match 'item\.Foreground\s*=\s*_theme\.Foreground') 'theme selector items must use the active foreground color.'
 Require ($workspace -match 'ApplyThemeSelectorPalette\s*\(\s*\)\s*;[\s\S]*SelectThemeMode\s*\(\s*mode\s*\)') 'theme application must recolor the dropdown before restoring the selected mode.'
+
+# Stock Windows/WPF templates can repaint buttons and ComboBox chrome with a light OS hover surface.
+# Require QS3D-owned templates so dark foreground/background contrast remains deterministic.
+Require ($manager -match 'ApplyWpfControlChrome\s*\(') 'shared theme styler must apply deterministic WPF control chrome.'
+Require ($manager -match 'ApplyButtonChrome\s*\(') 'button chrome helper is missing.'
+Require ($manager -match 'CreateButtonTemplate\s*\(') 'button template must be QS3D-owned instead of stock WPF hover chrome.'
+Require ($manager -match 'ApplyComboBoxChrome\s*\(') 'ComboBox chrome helper is missing.'
+Require ($manager -match 'CreateComboBoxTemplate\s*\(') 'ComboBox template must be QS3D-owned instead of stock WPF hover chrome.'
+Require ($manager -match 'ApplyComboBoxItemChrome\s*\(') 'ComboBoxItem chrome helper is missing.'
+Require ($manager -match 'CreateComboBoxItemTemplate\s*\(') 'ComboBoxItem template must own hover/selection colors.'
+Require ($manager -match 'TemplateBindingExtension') 'themed templates must bind normal chrome to control palette properties.'
+Require ($workspace -match 'ApplyWpfControlChrome\s*\(\s*this\s*,\s*_theme\s*\)') 'workspace must apply deterministic themed chrome on initial construction.'
+Require ($workspace -match 'ApplyComboBoxItemChrome\s*\(\s*item\s*,\s*_theme\s*\)') 'theme dropdown items must apply deterministic themed item chrome.'
+
 Require ($browser -match 'Qs3dThemeManager|Qs3dThemePalette') 'WinForms browser must consume the shared theme.'
 Require ($mep -match 'Qs3dThemeManager|Qs3dThemePalette') 'MEP review palette must consume the shared theme.'
 
@@ -73,4 +87,4 @@ foreach ($entry in @($manifest.ApplicationPackage.Components.ComponentEntry)) {
     Require ($commands -contains 'QS3DUPDATE') "bundle entry '$($entry.AppName)' is missing the QS3DUPDATE lazy-load trigger."
 }
 
-Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, themed ComboBox popup resources, shared WPF/WinForms palette coverage, and the Ribbon update entry point/icon are present.'
+Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, deterministic dark-safe Button/ComboBox templates, shared WPF/WinForms palette coverage, and the Ribbon update entry point/icon are present.'
