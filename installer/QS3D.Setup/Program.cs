@@ -82,7 +82,7 @@ static async Task<int> RunAsync(string[] args)
 
             if (options.IsAllUsers && options.InstallRoot is null)
             {
-                var legacyDestination = GetLegacyProgramDataDestination();
+                var legacyDestination = GetLegacyProgramFilesDestination();
                 if (!PathsEqual(destination, legacyDestination))
                 {
                     RemoveInstalledBundle(legacyDestination, logPath);
@@ -100,7 +100,7 @@ static async Task<int> RunAsync(string[] args)
         string? warning = null;
         if (options.IsAllUsers && options.InstallRoot is null)
         {
-            var legacyDestination = GetLegacyProgramDataDestination();
+            var legacyDestination = GetLegacyProgramFilesDestination();
             if (!PathsEqual(destination, legacyDestination) && Directory.Exists(legacyDestination))
             {
                 try
@@ -273,7 +273,7 @@ static string ResolveDestinationRoot(SetupOptions options)
 
     var basePath = options.User
         ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-        : Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        : Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
 
     if (string.IsNullOrWhiteSpace(basePath))
     {
@@ -283,10 +283,10 @@ static string ResolveDestinationRoot(SetupOptions options)
     return Path.Combine(basePath, "Autodesk", "ApplicationPlugins");
 }
 
-static string GetLegacyProgramDataDestination()
+static string GetLegacyProgramFilesDestination()
 {
-    var commonData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-    return Path.Combine(commonData, "Autodesk", "ApplicationPlugins", "QS3D.bundle");
+    var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+    return Path.Combine(programFiles, "Autodesk", "ApplicationPlugins", "QS3D.bundle");
 }
 
 static int RelaunchElevated(string[] originalArgs, string logPath)

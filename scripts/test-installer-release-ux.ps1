@@ -57,4 +57,25 @@ if ($runtimeSmoke.Contains('0.0.0-ci', [StringComparison]::Ordinal)) {
     throw 'Installer smoke regression: test-installer-runtime.ps1 must not default to an obsolete fixed engineering artifact name.'
 }
 
-Write-Host 'Installer interactive-console UX and engineering prerelease version identity guards passed.'
+# AutoCAD application bundles installed for all users must live under CommonApplicationData
+# (%ProgramData%\Autodesk\ApplicationPlugins). AutoCAD 2021 native discovery on the licensed
+# host does not discover the QS3D bundle from Program Files.
+$resolverStart = $setupProgram.IndexOf('static string ResolveDestinationRoot', [StringComparison]::Ordinal)
+$resolverEnd = $setupProgram.IndexOf('static string GetLegacyProgramFilesDestination', $resolverStart, [StringComparison]::Ordinal)
+if ($resolverStart -lt 0 -or $resolverEnd -le $resolverStart) {
+    throw 'Installer discovery regression: unable to isolate ResolveDestinationRoot implementation.'
+}
+$resolverBody = $setupProgram.Substring($resolverStart, $resolverEnd - $resolverStart)
+if (-not $resolverBody.Contains('Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)', [StringComparison]::Ordinal)) {
+    throw 'Installer discovery regression: all-users setup must resolve Autodesk\\ApplicationPlugins from CommonApplicationData (ProgramData).'
+}
+if ($resolverBody.Contains('Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)', [StringComparison]::Ordinal)) {
+    throw 'Installer discovery regression: all-users setup must not install QS3D.bundle under Program Files.'
+}
+if (-not $setupProgram.Contains('static string GetLegacyProgramFilesDestination()', [StringComparison]::Ordinal)) {
+    throw 'Installer migration regression: setup must retain a Program Files legacy destination cleanup helper.'
+}
+if ($setupProgram.Contains('GetLegacyProgramDataDestination', [StringComparison]::Ordinal)) {
+    throw 'Installer migration regression: ProgramData is canonical again and must not be treated as the legacy destination.'
+}
+Write-Host 'Installer interactive-console UX, all-users bundle discovery, and engineering prerelease version identity guards passed.'
