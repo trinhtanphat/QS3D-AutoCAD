@@ -43,7 +43,6 @@ internal static class Qs3dRibbon
             var tabType = GetRequiredType(uiAssembly, "Autodesk.Windows.RibbonTab");
             var panelType = GetRequiredType(uiAssembly, "Autodesk.Windows.RibbonPanel");
             var panelSourceType = GetRequiredType(uiAssembly, "Autodesk.Windows.RibbonPanelSource");
-            var rowType = GetRequiredType(uiAssembly, "Autodesk.Windows.RibbonRow");
             var buttonType = GetRequiredType(uiAssembly, "Autodesk.Windows.RibbonButton");
 
             var tab = Create(tabType);
@@ -55,13 +54,9 @@ internal static class Qs3dRibbon
             {
                 var panelSource = Create(panelSourceType);
                 SetRequiredProperty(panelSource, "Title", panelDefinition.Title);
-                var rows = GetRequiredProperty(panelSource, "Rows");
-
                 foreach (var commandName in panelDefinition.Commands)
                 {
                     var descriptor = Qs3dCommandCatalog.Get(commandName);
-                    var row = Create(rowType);
-                    var rowItems = GetRequiredProperty(row, "RowItems");
                     var button = Create(buttonType);
                     SetRequiredProperty(button, "Text", UiText.Get(descriptor.LabelKey));
                     SetPropertyIfWritable(button, "ShowText", true);
@@ -76,8 +71,7 @@ internal static class Qs3dRibbon
                         SetEnumPropertyIfWritable(button, "Size", "Large");
                     }
 
-                    AddToCollection(rowItems, button);
-                    AddToCollection(rows, row);
+                    AddCommandRow(uiAssembly, panelSource, button);
                 }
 
                 var panel = Create(panelType);
@@ -159,6 +153,25 @@ internal static class Qs3dRibbon
         var property = target.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
         if (property?.CanWrite != true || !property.PropertyType.IsEnum) return;
         property.SetValue(target, Enum.Parse(property.PropertyType, value, true));
+    }
+
+    private static void AddCommandRow(Assembly uiAssembly, object panelSource, object button)
+    {
+        var rowsProperty = panelSource.GetType().GetProperty("Rows", BindingFlags.Public | BindingFlags.Instance);
+        var rowType = uiAssembly.GetType("Autodesk.Windows.RibbonRow", false, false);
+        if (rowsProperty?.GetValue(panelSource) is object rows && rowType is not null)
+        {
+            var row = Create(rowType);
+            AddToCollection(GetRequiredProperty(row, "RowItems"), button);
+            AddToCollection(rows, row);
+            return;
+        }
+
+        var rowPanelType = uiAssembly.GetType("Autodesk.Windows.RibbonRowPanel", false, false)
+            ?? throw new InvalidOperationException("AutoCAD Ribbon row container is unavailable.");
+        var rowPanel = Create(rowPanelType);
+        AddToCollection(GetRequiredProperty(rowPanel, "Items"), button);
+        AddToCollection(GetRequiredProperty(panelSource, "Items"), rowPanel);
     }
 
     private static void AddToCollection(object collection, object item)
