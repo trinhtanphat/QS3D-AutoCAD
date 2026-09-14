@@ -8,6 +8,8 @@ using Autodesk.AutoCAD.Runtime;
 using QS3D.AutoCAD;
 using QS3D.Platform.Parity;
 
+[assembly: CommandClass(typeof(QS3D.AutoCAD.Commands.Qs3dMepCommands))]
+
 namespace QS3D.AutoCAD.Commands;
 
 public sealed class Qs3dMepCommands

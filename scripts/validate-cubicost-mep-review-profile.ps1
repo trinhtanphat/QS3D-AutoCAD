@@ -40,8 +40,15 @@ foreach ($token in $requiredProvider) {
 if (-not $command.Contains('MepRecognitionProfileProvider.Current.Recognize', [StringComparison]::Ordinal)) {
     throw 'MEP commands must consume the central runtime recognition profile provider.'
 }
+if (-not $command.Contains('[assembly: CommandClass(typeof(QS3D.AutoCAD.Commands.Qs3dMepCommands))]', [StringComparison]::Ordinal)) {
+    throw 'MEP command class must be registered explicitly for AutoCAD runtime command discovery.'
+}
 if ($command.Contains('private static readonly MepRecognitionProfile RecognitionProfile', [StringComparison]::Ordinal)) {
     throw 'MEP commands still contain an independent process-lifetime default recognition profile.'
+}
+
+if (-not $reviewCommand.Contains('[assembly: CommandClass(typeof(QS3D.AutoCAD.Commands.Qs3dMepReviewCommands))]', [StringComparison]::Ordinal)) {
+    throw 'MEP review command class must be registered explicitly for AutoCAD runtime command discovery.'
 }
 
 foreach ($token in @(
