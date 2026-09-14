@@ -44,6 +44,7 @@ foreach ($runtimeType in @(
     'Autodesk.Windows.RibbonPanel',
     'Autodesk.Windows.RibbonPanelSource',
     'Autodesk.Windows.RibbonRow',
+    'Autodesk.Windows.RibbonRowPanel',
     'Autodesk.Windows.RibbonButton'
 )) {
     if (-not $ribbonSource.Contains($runtimeType, [StringComparison]::Ordinal)) {
@@ -52,6 +53,13 @@ foreach ($runtimeType in @(
 }
 if (-not $ribbonSource.Contains('Assembly.Load("AdWindows")', [StringComparison]::Ordinal)) {
     throw 'Ribbon runtime bridge regression: AdWindows runtime fallback is missing.'
+}
+if ($ribbonSource.Contains('GetRequiredType(uiAssembly, "Autodesk.Windows.RibbonRow")', [StringComparison]::Ordinal)) {
+    throw 'Ribbon runtime bridge regression: RibbonRow must not be hard-required because AutoCAD 2021 exposes RibbonRowPanel instead.'
+}
+if (-not $ribbonSource.Contains('"Autodesk.Windows.RibbonRowPanel"', [StringComparison]::Ordinal) -or
+    -not $ribbonSource.Contains('"Items"', [StringComparison]::Ordinal)) {
+    throw 'Ribbon runtime bridge regression: AutoCAD 2021 RibbonRowPanel/Items compatibility path is missing.'
 }
 if ($ribbonSource.Contains('PaletteSet', [StringComparison]::Ordinal)) {
     throw 'Ribbon bridge must not own or construct the QS3D PaletteSet.'
