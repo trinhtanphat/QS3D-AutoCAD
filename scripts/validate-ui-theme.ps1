@@ -4,6 +4,7 @@ Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
 $ui = Join-Path $root 'src/QS3D.AutoCAD/UI'
 $managerPath = Join-Path $ui 'Qs3dThemeManager.cs'
+$chromePath = Join-Path $ui 'Qs3dControlChrome.cs'
 $workspacePath = Join-Path $ui 'Qs3dWorkspaceControl.cs'
 $browserPath = Join-Path $ui 'Qs3dBrowserControl.cs'
 $mepPath = Join-Path $ui 'MepReviewControl.cs'
@@ -18,8 +19,10 @@ function Require([bool]$condition, [string]$message) {
 }
 
 Require (Test-Path -LiteralPath $managerPath) 'shared Qs3dThemeManager.cs is missing.'
+Require (Test-Path -LiteralPath $chromePath) 'themed Qs3dControlChrome.cs is missing.'
 
 $manager = Get-Content -LiteralPath $managerPath -Raw
+$chrome = Get-Content -LiteralPath $chromePath -Raw
 $workspace = Get-Content -LiteralPath $workspacePath -Raw
 $browser = Get-Content -LiteralPath $browserPath -Raw
 $mep = Get-Content -LiteralPath $mepPath -Raw
@@ -50,14 +53,14 @@ Require ($workspace -match 'ApplyThemeSelectorPalette\s*\(\s*\)\s*;[\s\S]*Select
 
 # Stock Windows/WPF templates can repaint buttons and ComboBox chrome with a light OS hover surface.
 # Require QS3D-owned templates so dark foreground/background contrast remains deterministic.
-Require ($manager -match 'ApplyWpfControlChrome\s*\(') 'shared theme styler must apply deterministic WPF control chrome.'
-Require ($manager -match 'ApplyButtonChrome\s*\(') 'button chrome helper is missing.'
-Require ($manager -match 'CreateButtonTemplate\s*\(') 'button template must be QS3D-owned instead of stock WPF hover chrome.'
-Require ($manager -match 'ApplyComboBoxChrome\s*\(') 'ComboBox chrome helper is missing.'
-Require ($manager -match 'CreateComboBoxTemplate\s*\(') 'ComboBox template must be QS3D-owned instead of stock WPF hover chrome.'
-Require ($manager -match 'ApplyComboBoxItemChrome\s*\(') 'ComboBoxItem chrome helper is missing.'
-Require ($manager -match 'CreateComboBoxItemTemplate\s*\(') 'ComboBoxItem template must own hover/selection colors.'
-Require ($manager -match 'TemplateBindingExtension') 'themed templates must bind normal chrome to control palette properties.'
+Require ($chrome -match 'ApplyWpfControlChrome\s*\(') 'shared theme styler must apply deterministic WPF control chrome.'
+Require ($chrome -match 'ApplyButtonChrome\s*\(') 'button chrome helper is missing.'
+Require ($chrome -match 'CreateButtonTemplate\s*\(') 'button template must be QS3D-owned instead of stock WPF hover chrome.'
+Require ($chrome -match 'ApplyComboBoxChrome\s*\(') 'ComboBox chrome helper is missing.'
+Require ($chrome -match 'CreateComboBoxTemplate\s*\(') 'ComboBox template must be QS3D-owned instead of stock WPF hover chrome.'
+Require ($chrome -match 'ApplyComboBoxItemChrome\s*\(') 'ComboBoxItem chrome helper is missing.'
+Require ($chrome -match 'CreateComboBoxItemTemplate\s*\(') 'ComboBoxItem template must own hover/selection colors.'
+Require ($chrome -match 'TemplateBindingExtension') 'themed templates must bind normal chrome to control palette properties.'
 Require ($workspace -match 'ApplyWpfControlChrome\s*\(\s*this\s*,\s*_theme\s*\)') 'workspace must apply deterministic themed chrome on initial construction.'
 Require ($workspace -match 'ApplyComboBoxItemChrome\s*\(\s*item\s*,\s*_theme\s*\)') 'theme dropdown items must apply deterministic themed item chrome.'
 
