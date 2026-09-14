@@ -52,6 +52,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         Background = _theme.Background;
         Foreground = _theme.Foreground;
         Content = BuildLayout();
+        ApplyControlChrome();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         ApplyLanguage();
@@ -249,6 +250,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         item.Background = _theme.Card;
         item.Foreground = _theme.Foreground;
         item.BorderBrush = _theme.Border;
+        Qs3dControlChrome.ApplyComboBoxItemChrome(item, _theme);
         if (!item.IsSelected) return;
         item.Background = _theme.Selection;
         item.Foreground = _theme.AccentForeground;
@@ -586,6 +588,11 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         }
     }
 
+    private void ApplyControlChrome()
+    {
+        Qs3dControlChrome.ApplyWpfControlChrome(this, _theme);
+    }
+
     private void ApplyTheme(Qs3dThemeMode mode, Qs3dThemePalette palette)
     {
         var previous = _theme;
@@ -595,6 +602,7 @@ internal sealed class Qs3dWorkspaceControl : WpfUserControl
         Foreground = _theme.Foreground;
         _browser.ApplyTheme(_theme);
         ApplyThemeSelectorPalette();
+        ApplyControlChrome();
         SelectThemeMode(mode);
         UpdateNavigationState();
     }

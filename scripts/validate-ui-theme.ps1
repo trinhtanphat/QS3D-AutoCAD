@@ -4,6 +4,7 @@ Set-StrictMode -Version Latest
 $root = Split-Path -Parent $PSScriptRoot
 $ui = Join-Path $root 'src/QS3D.AutoCAD/UI'
 $managerPath = Join-Path $ui 'Qs3dThemeManager.cs'
+$chromePath = Join-Path $ui 'Qs3dControlChrome.cs'
 $workspacePath = Join-Path $ui 'Qs3dWorkspaceControl.cs'
 $browserPath = Join-Path $ui 'Qs3dBrowserControl.cs'
 $mepPath = Join-Path $ui 'MepReviewControl.cs'
@@ -18,8 +19,10 @@ function Require([bool]$condition, [string]$message) {
 }
 
 Require (Test-Path -LiteralPath $managerPath) 'shared Qs3dThemeManager.cs is missing.'
+Require (Test-Path -LiteralPath $chromePath) 'themed Qs3dControlChrome.cs is missing.'
 
 $manager = Get-Content -LiteralPath $managerPath -Raw
+$chrome = Get-Content -LiteralPath $chromePath -Raw
 $workspace = Get-Content -LiteralPath $workspacePath -Raw
 $browser = Get-Content -LiteralPath $browserPath -Raw
 $mep = Get-Content -LiteralPath $mepPath -Raw
@@ -47,6 +50,20 @@ foreach ($resourceKey in @('WindowBrushKey', 'ControlBrushKey', 'WindowTextBrush
 Require ($workspace -match 'item\.Background\s*=\s*_theme\.Card') 'theme selector items must use the active card background.'
 Require ($workspace -match 'item\.Foreground\s*=\s*_theme\.Foreground') 'theme selector items must use the active foreground color.'
 Require ($workspace -match 'ApplyThemeSelectorPalette\s*\(\s*\)\s*;[\s\S]*SelectThemeMode\s*\(\s*mode\s*\)') 'theme application must recolor the dropdown before restoring the selected mode.'
+
+# Stock Windows/WPF templates can repaint buttons and ComboBox chrome with a light OS hover surface.
+# Require QS3D-owned templates so dark foreground/background contrast remains deterministic.
+Require ($chrome -match 'ApplyWpfControlChrome\s*\(') 'shared theme styler must apply deterministic WPF control chrome.'
+Require ($chrome -match 'ApplyButtonChrome\s*\(') 'button chrome helper is missing.'
+Require ($chrome -match 'CreateButtonTemplate\s*\(') 'button template must be QS3D-owned instead of stock WPF hover chrome.'
+Require ($chrome -match 'ApplyComboBoxChrome\s*\(') 'ComboBox chrome helper is missing.'
+Require ($chrome -match 'CreateComboBoxTemplate\s*\(') 'ComboBox template must be QS3D-owned instead of stock WPF hover chrome.'
+Require ($chrome -match 'ApplyComboBoxItemChrome\s*\(') 'ComboBoxItem chrome helper is missing.'
+Require ($chrome -match 'CreateComboBoxItemTemplate\s*\(') 'ComboBoxItem template must own hover/selection colors.'
+Require ($chrome -match 'TemplateBindingExtension') 'themed templates must bind normal chrome to control palette properties.'
+Require ($workspace -match 'ApplyWpfControlChrome\s*\(\s*this\s*,\s*_theme\s*\)') 'workspace must apply deterministic themed chrome on initial construction.'
+Require ($workspace -match 'ApplyComboBoxItemChrome\s*\(\s*item\s*,\s*_theme\s*\)') 'theme dropdown items must apply deterministic themed item chrome.'
+
 Require ($browser -match 'Qs3dThemeManager|Qs3dThemePalette') 'WinForms browser must consume the shared theme.'
 Require ($mep -match 'Qs3dThemeManager|Qs3dThemePalette') 'MEP review palette must consume the shared theme.'
 
@@ -73,4 +90,4 @@ foreach ($entry in @($manifest.ApplicationPackage.Components.ComponentEntry)) {
     Require ($commands -contains 'QS3DUPDATE') "bundle entry '$($entry.AppName)' is missing the QS3DUPDATE lazy-load trigger."
 }
 
-Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, themed ComboBox popup resources, shared WPF/WinForms palette coverage, and the Ribbon update entry point/icon are present.'
+Write-Host 'QS3D UI theme contract PASS: System/Light/Dark, AutoCAD mapping, persistence, eventing, deterministic dark-safe Button/ComboBox templates, shared WPF/WinForms palette coverage, and the Ribbon update entry point/icon are present.'
