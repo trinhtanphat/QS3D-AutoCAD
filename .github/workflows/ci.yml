@@ -144,6 +144,9 @@ jobs:
       - name: Architecture and bundle guards
         shell: pwsh
         run: ./scripts/validate-architecture.ps1
+      - name: QS3D XData undo/redo RegApp guard
+        shell: pwsh
+        run: ./scripts/validate-xdata-undo-redo.ps1
       - name: Release security policy guards
         shell: pwsh
         run: ./scripts/validate-release-policy.ps1

@@ -161,9 +161,25 @@ internal sealed record Qs3dEntityMetadata(
             return;
         }
 
-        table.UpgradeOpen();
-        var record = new RegAppTableRecord { Name = RegAppName };
-        table.Add(record);
-        transaction.AddNewlyCreatedDBObject(record, true);
+        var undoRecordingWasEnabled = database.UndoRecording;
+        if (undoRecordingWasEnabled)
+        {
+            database.DisableUndoRecording(true);
+        }
+
+        try
+        {
+            table.UpgradeOpen();
+            var record = new RegAppTableRecord { Name = RegAppName };
+            table.Add(record);
+            transaction.AddNewlyCreatedDBObject(record, true);
+        }
+        finally
+        {
+            if (undoRecordingWasEnabled)
+            {
+                database.DisableUndoRecording(false);
+            }
+        }
     }
 }
